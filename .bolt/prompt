@@ -1,0 +1,27 @@
+For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.
+
+By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
+
+Use icons from lucide-react for logos.
+
+Use **serverless edge functions** for all API routes and logic — including authentication, product CRUD, order processing, and dropshipping API calls.
+
+- Host functions on edge runtimes (Supabase Edge Functions).
+- Ensure fast cold starts and low latency, especially for global traffic.
+- Functions should be stateless and connect securely to the Supabase/PostgreSQL database via serverless-safe client.
+- API endpoints should reside in the `/api` folder and export handlers compatible with edge runtimes.
+- Use native Web APIs or lightweight libraries (e.g., `undici`, `cross-fetch`) in edge handlers.
+- Avoid usage of Node.js-only packages that are incompatible with edge environments.
+
+ensure when creatin new pages there are not duplicate, to avoid editing confusion in pages
+remove all mock data and create real implementation, for our project
+
+
+⚠️ Do not use any mock data, placeholder APIs, or simulated logic. All code should use real implementations with production-ready logic, connected to the actual database, edge functions, or third-party APIs (e.g., dropshipping API, Stripe, Supabase).
+
+Do not include fake products, mock vendors, or dummy users.
+All database models, API routes, and UI components must reflect real-world usage with actual data fetching, mutations, and validations.
+Use Supabase/PostgreSQL for persistent storage, not local state or JSON arrays.
+For any third-party API (e.g., dropshipping), integrate real endpoints using secure fetch methods — no stubs or sample responses.
+If an API key or credential is required, request for it and add to supabase
+If real data isn't available yet, build the code as if data will come from the live source — do not generate filler content or simulate responses.
