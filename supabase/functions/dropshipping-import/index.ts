@@ -1164,61 +1164,6 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      case 'bulk_delete': {
-        const { productIds } = requestData;
-
-        if (!Array.isArray(productIds) || productIds.length === 0) {
-          throw new Error('Product IDs array required');
-        }
-
-        let deleted = 0;
-        const errors = [];
-
-        for (const productId of productIds) {
-          try {
-            // Delete from dropshipping_products table
-            const { error: dropshippingError } = await supabase
-              .from('dropshipping_products')
-              .delete()
-              .eq('id', productId);
-
-            if (dropshippingError) {
-              errors.push({ productId, error: dropshippingError.message });
-              continue;
-            }
-
-            // Delete from main products table
-            const { error: productsError } = await supabase
-              .from('products')
-              .delete()
-              .eq('external_id', productId)
-              .eq('is_dropshipped', true);
-
-            if (productsError) {
-              console.error('Failed to delete from products table:', productsError);
-              // Don't count as error since main deletion succeeded
-            }
-
-            deleted++;
-          } catch (error) {
-            errors.push({ productId, error: error.message });
-          }
-        }
-
-        return new Response(
-          JSON.stringify({ 
-            success: deleted > 0,
-            deleted,
-            total: productIds.length,
-            errors: errors.length,
-            errorDetails: errors
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
       default:
         throw new Error('Invalid action');
     }
