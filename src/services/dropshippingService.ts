@@ -5,7 +5,13 @@ class DropshippingService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    
+    if (!supabaseUrl) {
+      throw new Error('VITE_SUPABASE_URL environment variable is not set. Please configure your Supabase project URL.');
+    }
+    
+    this.baseUrl = `${supabaseUrl}/functions/v1`;
   }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
