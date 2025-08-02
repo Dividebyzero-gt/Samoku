@@ -26,9 +26,11 @@ import {
 import { useRoleAccess } from '../../hooks/useRoleAccess';
 import RoleGuard from '../../components/auth/RoleGuard';
 import DropshippingManager from '../../components/admin/DropshippingManager';
+import { useAuth } from '../../contexts/AuthContext';</parameter>
 
 const EnhancedAdminDashboard: React.FC = () => {
   const { isAdmin, canManageDropshipping, canManageUsers } = useRoleAccess();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
 
@@ -44,6 +46,21 @@ const EnhancedAdminDashboard: React.FC = () => {
     commissionsOwed: 8420
   });
 
+  // Admin profile management state
+  const [adminProfile, setAdminProfile] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: TrendingUp, roles: ['admin'] },
     { id: 'dropshipping', label: 'Dropshipping', icon: Download, roles: ['admin'] },
@@ -53,6 +70,7 @@ const EnhancedAdminDashboard: React.FC = () => {
     { id: 'commissions', label: 'Commissions', icon: DollarSign, roles: ['admin'] },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
     { id: 'settings', label: 'Platform Settings', icon: Settings, roles: ['admin'] },
+    { id: 'account', label: 'My Account', icon: UserCheck, roles: ['admin'] },
   ];
 
   const renderOverview = () => (
