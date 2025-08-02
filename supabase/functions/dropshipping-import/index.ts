@@ -1164,6 +1164,45 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      case 'bulk_delete': {
+        const { productIds } = requestData;
+
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+          throw new Error('Product IDs array required');
+        }
+
+        // Delete from dropshipping_products table
+        const { error: dropshippingError } = await supabase
+          .from('dropshipping_products')
+          .delete()
+          .in('id', productIds);
+
+        if (dropshippingError) {
+          throw dropshippingError;
+        }
+
+        // Delete from main products table
+        const { error: productsError } = await supabase
+          .from('products')
+          .delete()
+          .in('external_id', productIds)
+          .eq('is_dropshipped', true);
+
+        if (productsError) {
+          console.error('Failed to delete from products table:', productsError);
+          // Don't throw error, as main deletion succeeded
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            deleted: productIds.length 
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
       default:
         throw new Error('Invalid action');
     }
