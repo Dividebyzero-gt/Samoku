@@ -40,7 +40,7 @@ class DropshippingAPI {
 
   async getProducts(category?: string, limit: number = 50): Promise<DropshippingProduct[]> {
     try {
-      const apiUrl = this.getApiUrl('products');
+      const apiUrl = this.getApiUrl(this.getProductsEndpoint());
       const headers = this.getHeaders();
 
       const params = new URLSearchParams();
@@ -50,6 +50,9 @@ class DropshippingAPI {
         if (providerCategory) params.append('category', providerCategory);
       }
       params.append('limit', limit.toString());
+      
+      // Add production-specific parameters
+      this.addProductionParams(params);
 
       const response = await fetch(`${apiUrl}?${params}`, {
         method: 'GET',
@@ -73,7 +76,7 @@ class DropshippingAPI {
 
   async getProductStock(productId: string): Promise<number> {
     try {
-      const apiUrl = this.getApiUrl(`products/${productId}`);
+      const apiUrl = this.getApiUrl(this.getProductEndpoint(productId));
       const headers = this.getHeaders();
 
       const response = await fetch(apiUrl, {
@@ -95,7 +98,7 @@ class DropshippingAPI {
 
   async createOrder(orderData: any): Promise<{ orderId: string; trackingNumber?: string }> {
     try {
-      const apiUrl = this.getApiUrl('orders');
+      const apiUrl = this.getApiUrl(this.getOrdersEndpoint());
       const headers = this.getHeaders();
       const transformedData = this.transformOrderData(orderData);
 
@@ -122,15 +125,78 @@ class DropshippingAPI {
     }
   }
 
+  private getProductsEndpoint(): string {
+    switch (this.provider) {
+      case 'printful':
+        return 'store/products'; // Production endpoint for store products
+      case 'spocket':
+        return 'products'; // Live product catalog
+      case 'dropcommerce':
+        return 'products'; // Production product list
+      case 'mock_api':
+        return 'products';
+      default:
+        return 'products';
+    }
+  }
+
+  private getProductEndpoint(productId: string): string {
+    switch (this.provider) {
+      case 'printful':
+        return `store/products/${productId}`;
+      case 'spocket':
+        return `products/${productId}`;
+      case 'dropcommerce':
+        return `products/${productId}`;
+      case 'mock_api':
+        return `products/${productId}`;
+      default:
+        return `products/${productId}`;
+    }
+  }
+
+  private getOrdersEndpoint(): string {
+    switch (this.provider) {
+      case 'printful':
+        return 'orders'; // Production orders endpoint
+      case 'spocket':
+        return 'orders'; // Live order processing
+      case 'dropcommerce':
+        return 'orders'; // Production order fulfillment
+      case 'mock_api':
+        return 'orders';
+      default:
+        return 'orders';
+    }
+  }
+
+  private addProductionParams(params: URLSearchParams): void {
+    switch (this.provider) {
+      case 'printful':
+        // Printful production parameters
+        params.append('status', 'synced'); // Only synced products
+        break;
+      case 'spocket':
+        // Spocket production parameters
+        params.append('status', 'published'); // Only published products
+        params.append('stock_status', 'in_stock'); // Only in-stock items
+        break;
+      case 'dropcommerce':
+        // DropCommerce production parameters
+        params.append('published', 'true'); // Only published products
+        params.append('status', 'active'); // Only active products
+        break;
+    }
+  }
   private getApiUrl(endpoint: string): string {
     // Configure API URLs based on provider
     switch (this.provider) {
       case 'printful':
-        return `https://api.printful.com/store/${endpoint}`;
+        return `https://api.printful.com/${endpoint}`;
       case 'spocket':
-        return `https://api.spocket.co/v2/${endpoint}`;
+        return `https://api.spocket.co/api/v2/${endpoint}`;
       case 'dropcommerce':
-        return `https://api.dropcommerce.com/api/v2/${endpoint}`;
+        return `https://api.dropcommerce.com/v1/${endpoint}`;
       case 'mock_api':
         return `https://api.mockdropship.com/v1/${endpoint}`;
       default:
@@ -141,18 +207,20 @@ class DropshippingAPI {
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'User-Agent': 'Samoku/1.0',
     };
 
     // Configure authentication headers based on provider
     switch (this.provider) {
       case 'printful':
-        headers['Authorization'] = `Basic ${btoa(this.apiKey)}`;
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
         break;
       case 'spocket':
         headers['X-Spocket-Access-Token'] = this.apiKey;
+        headers['Content-Type'] = 'application/json';
         break;
       case 'dropcommerce':
-        headers['X-API-Key'] = this.apiKey;
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
         if (this.apiSecret) {
           headers['X-API-Secret'] = this.apiSecret;
         }
@@ -182,17 +250,17 @@ class DropshippingAPI {
   }
 
   private transformPrintfulProducts(data: any): DropshippingProduct[] {
-    const products = data.result || data.products || [];
+    const products = data.result || data.data || [];
     return products.map((item: any) => ({
-      id: item.id?.toString() || `printful_${Date.now()}_${Math.random()}`,
-      title: item.name || item.title || 'Untitled Product',
-      description: item.description || 'No description available',
-      price: this.parsePrice(item.retail_price || item.price || '0'),
-      sku: item.sku || `PRINT_${item.id}`,
-      category: this.mapPrintfulCategory(item.category_name || item.category),
+      id: item.sync_product?.id?.toString() || item.id?.toString() || `printful_${Date.now()}_${Math.random()}`,
+      title: item.sync_product?.name || item.name || item.title || 'Untitled Product',
+      description: item.sync_product?.description || item.description || 'No description available',
+      price: this.parsePrice(item.sync_variants?.[0]?.retail_price || item.retail_price || item.price || '0'),
+      sku: item.sync_variants?.[0]?.sku || item.sku || `PRINT_${item.id}`,
+      category: this.mapPrintfulCategory(item.sync_product?.category_name || item.category_name || item.category),
       tags: this.extractTags(item.tags || item.type),
       images: this.extractPrintfulImages(item),
-      stock_level: parseInt(item.quantity) || 999, // Printful typically has unlimited stock
+      stock_level: parseInt(item.sync_variants?.[0]?.quantity) || 999, // Printful production stock
       shipping_time: '7-14 business days',
       weight: parseFloat(item.weight) || 0,
       dimensions: item.dimensions || null,
@@ -201,17 +269,17 @@ class DropshippingAPI {
   }
 
   private transformSpocketProducts(data: any): DropshippingProduct[] {
-    const products = data.products || data.data || [];
+    const products = data.data?.products || data.products || data.data || [];
     return products.map((item: any) => ({
       id: item.id?.toString() || `spocket_${Date.now()}_${Math.random()}`,
       title: item.name || item.title || 'Untitled Product',
-      description: item.description || item.short_description || 'No description available',
-      price: this.parsePrice(item.retail_price || item.price || '0'),
+      description: item.description || item.short_description || item.body_html || 'No description available',
+      price: this.parsePrice(item.variants?.[0]?.price || item.retail_price || item.price || '0'),
       sku: item.sku || `SPKT_${item.id}`,
       category: this.mapSpocketCategory(item.category || item.product_category),
       tags: this.extractTags(item.tags || item.keywords),
-      images: Array.isArray(item.images) ? item.images : [item.main_image].filter(Boolean),
-      stock_level: parseInt(item.inventory_count || item.inventory) || 0,
+      images: Array.isArray(item.images) ? item.images.map((img: any) => img.src || img) : [item.main_image, item.featured_image].filter(Boolean),
+      stock_level: parseInt(item.variants?.[0]?.inventory_quantity || item.inventory_count || item.inventory) || 0,
       shipping_time: this.parseShippingTime(item.shipping_time || item.processing_time),
       weight: parseFloat(item.weight) || 0,
       dimensions: item.dimensions || null,
@@ -220,17 +288,17 @@ class DropshippingAPI {
   }
 
   private transformDropCommerceProducts(data: any): DropshippingProduct[] {
-    const products = data.products || data.data || data.results || [];
+    const products = data.data?.products || data.products || data.data || data.results || [];
     return products.map((item: any) => ({
       id: item.id?.toString() || `dropcom_${Date.now()}_${Math.random()}`,
       title: item.title || item.name || 'Untitled Product',
-      description: item.description || item.body_html || 'No description available',
-      price: this.parsePrice(item.price || item.retail_price || '0'),
-      sku: item.sku || item.vendor_sku || `DC_${item.id}`,
+      description: item.description || item.body_html || item.short_description || 'No description available',
+      price: this.parsePrice(item.variants?.[0]?.price || item.price || item.retail_price || '0'),
+      sku: item.variants?.[0]?.sku || item.sku || item.vendor_sku || `DC_${item.id}`,
       category: this.mapDropCommerceCategory(item.product_type || item.category),
       tags: this.extractTags(item.tags || item.categories),
       images: this.extractDropCommerceImages(item),
-      stock_level: parseInt(item.inventory_quantity || item.stock) || 0,
+      stock_level: parseInt(item.variants?.[0]?.inventory_quantity || item.inventory_quantity || item.stock) || 0,
       shipping_time: this.parseShippingTime(item.shipping_time || '3-7 business days'),
       weight: parseFloat(item.weight) || 0,
       dimensions: item.dimensions || null,
@@ -328,11 +396,11 @@ class DropshippingAPI {
   private extractStockFromResponse(data: any): number {
     switch (this.provider) {
       case 'printful':
-        return data.result?.quantity || 999; // Printful usually has unlimited stock
+        return data.result?.sync_variants?.[0]?.quantity || data.result?.quantity || 999;
       case 'spocket':
-        return data.inventory_count || data.inventory || 0;
+        return data.variants?.[0]?.inventory_quantity || data.inventory_count || data.inventory || 0;
       case 'dropcommerce':
-        return data.inventory_quantity || data.stock || 0;
+        return data.variants?.[0]?.inventory_quantity || data.inventory_quantity || data.stock || 0;
       default:
         return data.stock || data.quantity || 0;
     }
@@ -341,11 +409,11 @@ class DropshippingAPI {
   private extractOrderId(data: any): string {
     switch (this.provider) {
       case 'printful':
-        return data.result?.id || data.id;
+        return data.result?.id?.toString() || data.id?.toString();
       case 'spocket':
-        return data.order?.id || data.id;
+        return data.data?.id?.toString() || data.order?.id?.toString() || data.id?.toString();
       case 'dropcommerce':
-        return data.order_id || data.id;
+        return data.data?.id?.toString() || data.order_id?.toString() || data.id?.toString();
       default:
         return data.id || data.order_id || `${this.provider}_${Date.now()}`;
     }
@@ -354,11 +422,11 @@ class DropshippingAPI {
   private extractTrackingNumber(data: any): string | undefined {
     switch (this.provider) {
       case 'printful':
-        return data.result?.tracking_number || data.tracking?.number;
+        return data.result?.shipments?.[0]?.tracking_number || data.result?.tracking_number || data.tracking?.number;
       case 'spocket':
-        return data.tracking_number;
+        return data.data?.tracking_number || data.tracking_number;
       case 'dropcommerce':
-        return data.tracking_number || data.fulfillment?.tracking_number;
+        return data.data?.tracking_number || data.tracking_number || data.fulfillment?.tracking_number;
       default:
         return data.tracking_number;
     }
@@ -452,60 +520,70 @@ class DropshippingAPI {
     switch (this.provider) {
       case 'printful':
         return {
+          external_id: orderData.orderId,
           recipient: {
             name: orderData.customer.name,
-            company: '',
+            company: orderData.customer.company || '',
             email: orderData.customer.email,
             phone: orderData.shipping.phone || '',
             address1: orderData.shipping.street,
             address2: '',
             city: orderData.shipping.city,
             state_code: orderData.shipping.state,
-            country_code: orderData.shipping.country,
+            country_code: this.getCountryCode(orderData.shipping.country),
             zip: orderData.shipping.zipCode
           },
           items: [{
-            sync_variant_id: parseInt(orderData.productExternalId),
+            variant_id: parseInt(orderData.productExternalId),
             quantity: orderData.quantity,
-            retail_price: orderData.price || null
+            retail_price: orderData.price ? orderData.price.toString() : null
           }],
-          retail_costs: {
-            currency: 'USD',
-            subtotal: orderData.subtotal || null,
-            discount: orderData.discount || null,
-            shipping: orderData.shipping_cost || null,
-            tax: orderData.tax || null
+          packing_slip: {
+            email: orderData.customer.email,
+            phone: orderData.shipping.phone || '',
+            message: 'Thank you for your order from Samoku!'
           }
         };
       case 'spocket':
         return {
+          order: {
+            id: orderData.orderId,
+            email: orderData.customer.email,
+            currency: 'USD',
+            financial_status: 'paid'
+          },
           line_items: [{
-            spocket_product_id: orderData.productExternalId,
+            variant_id: orderData.productExternalId,
             quantity: orderData.quantity,
-            product_variant_id: orderData.variantId || null
+            price: orderData.price?.toString() || '0'
           }],
           shipping_address: {
             first_name: orderData.customer.name.split(' ')[0],
             last_name: orderData.customer.name.split(' ').slice(1).join(' '),
-            company: '',
+            company: orderData.customer.company || '',
             address1: orderData.shipping.street,
             address2: '',
             city: orderData.shipping.city,
             zip: orderData.shipping.zipCode,
             province: orderData.shipping.state,
-            country: orderData.shipping.country,
+            country_code: this.getCountryCode(orderData.shipping.country),
             phone: orderData.shipping.phone || ''
-          },
-          email: orderData.customer.email,
-          order_id: orderData.orderId
+          }
         };
       case 'dropcommerce':
         return {
-          external_order_id: orderData.orderId,
+          order: {
+            external_id: orderData.orderId,
+            email: orderData.customer.email,
+            currency: 'USD',
+            financial_status: 'paid',
+            fulfillment_status: 'unfulfilled'
+          },
           line_items: [{
             product_id: orderData.productExternalId,
             quantity: orderData.quantity,
-            variant_id: orderData.variantId || null
+            variant_id: orderData.variantId || null,
+            price: orderData.price?.toString() || '0'
           }],
           shipping_address: {
             first_name: orderData.customer.name.split(' ')[0],
@@ -514,14 +592,9 @@ class DropshippingAPI {
             address2: '',
             city: orderData.shipping.city,
             province: orderData.shipping.state,
-            country: orderData.shipping.country,
+            country_code: this.getCountryCode(orderData.shipping.country),
             zip: orderData.shipping.zipCode,
             phone: orderData.shipping.phone || ''
-          },
-          customer: {
-            email: orderData.customer.email,
-            first_name: orderData.customer.name.split(' ')[0],
-            last_name: orderData.customer.name.split(' ').slice(1).join(' ')
           }
         };
       case 'mock_api':
@@ -535,6 +608,21 @@ class DropshippingAPI {
       default:
         return orderData;
     }
+  }
+
+  private getCountryCode(country: string): string {
+    const countryMap: Record<string, string> = {
+      'united states': 'US',
+      'canada': 'CA',
+      'united kingdom': 'GB',
+      'australia': 'AU',
+      'germany': 'DE',
+      'france': 'FR',
+      'italy': 'IT',
+      'spain': 'ES'
+    };
+    
+    return countryMap[country.toLowerCase()] || country.toUpperCase().slice(0, 2);
   }
 }
 

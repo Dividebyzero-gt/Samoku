@@ -393,11 +393,17 @@ const DropshippingManager: React.FC = () => {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h5 className="font-medium text-blue-900 mb-2">Printful Setup Instructions</h5>
               <ol className="text-sm text-blue-800 space-y-1">
-                <li>1. Go to your Printful Dashboard → Settings → API</li>
-                <li>2. Copy your Private API Key</li>
+                <li>1. Go to your Printful Dashboard → Settings → Stores</li>
+                <li>2. Select your store and go to API tab</li>
+                <li>3. Copy your <strong>Private Access Token</strong> (not API Key)</li>
                 <li>3. Paste it in the API Key field above</li>
-                <li>4. Leave API Secret empty (not needed for Printful)</li>
+                <li>4. ⚠️ <strong>PRODUCTION MODE:</strong> This will access live products and create real orders</li>
               </ol>
+              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
+                <p className="text-xs text-red-800">
+                  <strong>Warning:</strong> Using production API keys will create real orders and charges. Test in sandbox first.
+                </p>
+              </div>
             </div>
           )}
 
@@ -405,11 +411,16 @@ const DropshippingManager: React.FC = () => {
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <h5 className="font-medium text-green-900 mb-2">Spocket Setup Instructions</h5>
               <ol className="text-sm text-green-800 space-y-1">
-                <li>1. Go to your Spocket Dashboard → Settings → API</li>
-                <li>2. Generate an Access Token</li>
+                <li>1. Go to your Spocket Dashboard → Settings → Integrations</li>
+                <li>2. Generate a <strong>Production API Key</strong></li>
                 <li>3. Paste it in the API Key field above</li>
-                <li>4. Leave API Secret empty (not needed for Spocket)</li>
+                <li>4. ⚠️ <strong>PRODUCTION MODE:</strong> This will access live supplier products</li>
               </ol>
+              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
+                <p className="text-xs text-red-800">
+                  <strong>Warning:</strong> Production API will place real orders with suppliers and incur costs.
+                </p>
+              </div>
             </div>
           )}
 
@@ -417,11 +428,16 @@ const DropshippingManager: React.FC = () => {
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
               <h5 className="font-medium text-purple-900 mb-2">DropCommerce Setup Instructions</h5>
               <ol className="text-sm text-purple-800 space-y-1">
-                <li>1. Contact DropCommerce support for API access</li>
-                <li>2. Get your API Key and Secret from your account</li>
+                <li>1. Go to your DropCommerce Dashboard → API Settings</li>
+                <li>2. Generate <strong>Production API Credentials</strong></li>
                 <li>3. Enter both API Key and API Secret above</li>
-                <li>4. API Secret is required for DropCommerce</li>
+                <li>4. ⚠️ <strong>PRODUCTION MODE:</strong> This will access live products and process real orders</li>
               </ol>
+              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
+                <p className="text-xs text-red-800">
+                  <strong>Warning:</strong> Production credentials will create real fulfillment orders and charges.
+                </p>
+              </div>
             </div>
           )}
 
@@ -440,11 +456,11 @@ const DropshippingManager: React.FC = () => {
   const getApiKeyPlaceholder = () => {
     switch (configForm.provider) {
       case 'printful':
-        return 'Enter your Printful Private API Key';
+        return 'Enter your Printful Production Access Token';
       case 'spocket':
-        return 'Enter your Spocket Access Token';
+        return 'Enter your Spocket Production API Key';
       case 'dropcommerce':
-        return 'Enter your DropCommerce API Key';
+        return 'Enter your DropCommerce Production API Key';
       case 'mock_api':
         return 'Enter any value for testing';
       default:
@@ -459,7 +475,7 @@ const DropshippingManager: React.FC = () => {
       case 'spocket':
         return 'Not required for Spocket';
       case 'dropcommerce':
-        return 'Enter your DropCommerce API Secret';
+        return 'Enter your DropCommerce Production API Secret';
       case 'mock_api':
         return 'Not required for testing';
       default:

@@ -126,7 +126,8 @@ class DropshippingService {
           action: 'test_connection',
           provider,
           apiKey,
-          apiSecret
+          apiSecret,
+          environment: 'production'
         })
       });
       
