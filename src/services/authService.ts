@@ -232,24 +232,6 @@ class AuthService {
         return null;
       }
 
-      // Try to get user profile from database, but fall back to auth metadata if it fails
-      try {
-        const { data: userProfile, error } = await supabase
-          .from('users')
-          .select(`
-            *,
-            stores (*)
-          `)
-          .eq('id', authUser.id)
-          .single();
-
-        if (!error && userProfile) {
-          return this.mapUser(userProfile);
-        }
-      } catch (dbError) {
-        console.warn('Database user profile fetch failed, using auth metadata:', dbError);
-      }
-
       // Fallback: create user object from auth metadata
       const userRole = authUser.user_metadata?.role || 'customer';
       const userName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User';
@@ -301,7 +283,43 @@ class AuthService {
 
     return supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const user = await this.getCurrentUser();
+        // Use auth metadata directly to avoid RLS issues during auth
+        const authUser = session.user;
+        const userRole = authUser.user_metadata?.role || 'customer';
+        const userName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User';
+        
+        const user: User = {
+          id: authUser.id,
+          email: authUser.email || '',
+          name: userName,
+          role: userRole as 'admin' | 'vendor' | 'customer',
+          phone: null,
+          avatarUrl: null,
+          isActive: true,
+          createdAt: authUser.created_at || new Date().toISOString(),
+          updatedAt: authUser.updated_at || new Date().toISOString(),
+        };
+
+        // Add admin store info if admin user
+        if (userRole === 'admin' && authUser.email === 'admin@samoku.com') {
+          user.store = {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            userId: authUser.id,
+            name: 'Samoku Admin Store',
+            description: 'Official admin store for dropshipped products',
+            logoUrl: null,
+            bannerUrl: null,
+            isApproved: true,
+            isActive: true,
+            commissionRate: 0,
+            totalSales: 0,
+            rating: 0,
+            reviewCount: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+
         callback(user);
       } else {
         callback(null);

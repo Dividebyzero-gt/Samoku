@@ -42,7 +42,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Listen for auth state changes
     const { data: { subscription } } = authService.onAuthStateChange((user) => {
-      setUser(user);
+      // Only set user if we actually get one, don't clear on null during auth process
+      if (user !== null) {
+        setUser(user);
+      }
       setLoading(false);
     });
 
