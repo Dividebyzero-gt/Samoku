@@ -226,6 +226,7 @@ const EnhancedAdminDashboard: React.FC = () => {
       </div>
     );
   }
+
   const renderOverview = () => (
     <div className="space-y-6">
       <div>
