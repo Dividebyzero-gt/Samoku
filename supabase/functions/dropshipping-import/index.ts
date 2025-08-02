@@ -537,13 +537,6 @@ class DropshippingAPI {
     }
   }
 }
-          }]
-        };
-      default:
-        return orderData;
-    }
-  }
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
