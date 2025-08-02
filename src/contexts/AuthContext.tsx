@@ -54,9 +54,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (credentials: SignInData): Promise<boolean> => {
     try {
       console.log('AuthContext: Starting login process for:', credentials.email);
+      
+      // Add timeout protection
+      const loginPromise = authService.signIn(credentials);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Login timeout')), 15000)
+      );
+      
       setLoading(true);
       
-      const { user: loggedInUser, error } = await authService.signIn(credentials);
+      const { user: loggedInUser, error } = await Promise.race([
+        loginPromise,
+        timeoutPromise
+      ]) as any;
       
       console.log('AuthContext: AuthService response:', { 
         hasUser: !!loggedInUser, 

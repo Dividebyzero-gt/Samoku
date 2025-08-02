@@ -27,7 +27,17 @@ const LoginPage: React.FC = () => {
 
     try {
       console.log('LoginPage: Calling login function');
-      const success = await login({ email, password });
+      
+      // Add client-side timeout
+      const loginPromise = login({ email, password });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Login process timeout')), 20000)
+      );
+      
+      const success = await Promise.race([
+        loginPromise,
+        timeoutPromise
+      ]) as boolean;
       
       console.log('LoginPage: Login result:', success);
       

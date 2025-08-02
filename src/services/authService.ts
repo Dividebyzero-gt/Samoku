@@ -106,10 +106,22 @@ class AuthService {
     try {
       console.log('AuthService: Starting signIn for:', credentials.email);
       
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      console.log('AuthService: Calling supabase.auth.signInWithPassword...');
+      
+      // Add timeout to prevent hanging
+      const authPromise = supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
+      
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Authentication timeout')), 10000)
+      );
+      
+      const { data: authData, error: authError } = await Promise.race([
+        authPromise,
+        timeoutPromise
+      ]) as any;
       
       console.log('AuthService: Supabase auth response:', { 
         hasUser: !!authData.user, 
