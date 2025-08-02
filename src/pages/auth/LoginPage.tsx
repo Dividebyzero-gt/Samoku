@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Store } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { adminSetupService } from '../../services/adminSetupService';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -115,6 +116,19 @@ const LoginPage: React.FC = () => {
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
               {error}
+            </div>
+          )}
+
+          {/* Supabase Configuration Warning */}
+          {!isSupabaseConfigured && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-amber-900 mb-2">⚠️ Supabase Not Connected</h4>
+              <p className="text-sm text-amber-700 mb-2">
+                You need to connect to Supabase before you can login.
+              </p>
+              <p className="text-sm text-amber-800 font-medium">
+                Click "Connect to Supabase" in the top right corner to set up the database connection.
+              </p>
             </div>
           )}
 

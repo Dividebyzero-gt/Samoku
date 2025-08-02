@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { User } from '../types';
 
 export interface SignUpData {
@@ -18,6 +19,14 @@ export interface SignInData {
 class AuthService {
   async signUp(userData: SignUpData): Promise<{ user: User | null; error: string | null }> {
     try {
+      // Check if Supabase is configured
+      if (!isSupabaseConfigured || !supabase) {
+        return { 
+          user: null, 
+          error: 'Supabase not configured. Please click "Connect to Supabase" in the top right corner.' 
+        };
+      }
+
       console.log('AuthService: signUp called for email:', userData.email);
       
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -104,6 +113,14 @@ class AuthService {
 
   async signIn(credentials: SignInData): Promise<{ user: User | null; error: string | null }> {
     try {
+      // Check if Supabase is configured
+      if (!isSupabaseConfigured || !supabase) {
+        return { 
+          user: null, 
+          error: 'Supabase not configured. Please click "Connect to Supabase" in the top right corner.' 
+        };
+      }
+
       console.log('AuthService: Starting signIn for:', credentials.email);
       
       console.log('AuthService: Calling supabase.auth.signInWithPassword...');
@@ -205,6 +222,10 @@ class AuthService {
 
   async getCurrentUser(): Promise<User | null> {
     try {
+      if (!isSupabaseConfigured || !supabase) {
+        return null;
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser();
       
       if (!authUser) {
@@ -273,6 +294,11 @@ class AuthService {
   }
 
   onAuthStateChange(callback: (user: User | null) => void) {
+    if (!isSupabaseConfigured || !supabase) {
+      callback(null);
+      return { data: { subscription: null } };
+    }
+
     return supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const user = await this.getCurrentUser();
