@@ -370,7 +370,7 @@ const DropshippingManager: React.FC = () => {
               type="password"
               value={configForm.apiKey}
               onChange={(e) => setConfigForm({ ...configForm, apiKey: e.target.value })}
-              placeholder="Enter your API key"
+              placeholder={getApiKeyPlaceholder()}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -383,10 +383,47 @@ const DropshippingManager: React.FC = () => {
               type="password"
               value={configForm.apiSecret}
               onChange={(e) => setConfigForm({ ...configForm, apiSecret: e.target.value })}
-              placeholder="Enter your API secret"
+              placeholder={getApiSecretPlaceholder()}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+
+          {/* Provider-specific settings */}
+          {configForm.provider === 'printful' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h5 className="font-medium text-blue-900 mb-2">Printful Setup Instructions</h5>
+              <ol className="text-sm text-blue-800 space-y-1">
+                <li>1. Go to your Printful Dashboard → Settings → API</li>
+                <li>2. Copy your Private API Key</li>
+                <li>3. Paste it in the API Key field above</li>
+                <li>4. Leave API Secret empty (not needed for Printful)</li>
+              </ol>
+            </div>
+          )}
+
+          {configForm.provider === 'spocket' && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h5 className="font-medium text-green-900 mb-2">Spocket Setup Instructions</h5>
+              <ol className="text-sm text-green-800 space-y-1">
+                <li>1. Go to your Spocket Dashboard → Settings → API</li>
+                <li>2. Generate an Access Token</li>
+                <li>3. Paste it in the API Key field above</li>
+                <li>4. Leave API Secret empty (not needed for Spocket)</li>
+              </ol>
+            </div>
+          )}
+
+          {configForm.provider === 'dropcommerce' && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <h5 className="font-medium text-purple-900 mb-2">DropCommerce Setup Instructions</h5>
+              <ol className="text-sm text-purple-800 space-y-1">
+                <li>1. Contact DropCommerce support for API access</li>
+                <li>2. Get your API Key and Secret from your account</li>
+                <li>3. Enter both API Key and API Secret above</li>
+                <li>4. API Secret is required for DropCommerce</li>
+              </ol>
+            </div>
+          )}
 
           <button
             onClick={handleConfigureAPI}
@@ -501,7 +538,7 @@ const DropshippingManager: React.FC = () => {
                   <div 
                     className="bg-blue-600 h-2 rounded-full" 
                     style={{ width: `${(count / products.length) * 100}%` }}
-                  placeholder={getApiKeyPlaceholder()}
+                  ></div>
                 </div>
                 <span className="text-sm font-medium text-gray-900">{count}</span>
               </div>
@@ -522,48 +559,11 @@ const DropshippingManager: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-                  placeholder={getApiSecretPlaceholder()}
+      <div>
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
-              {/* Provider-specific settings */}
-              {configForm.provider === 'printful' && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h5 className="font-medium text-blue-900 mb-2">Printful Setup Instructions</h5>
-                  <ol className="text-sm text-blue-800 space-y-1">
-                    <li>1. Go to your Printful Dashboard → Settings → API</li>
-                    <li>2. Copy your Private API Key</li>
-                    <li>3. Paste it in the API Key field above</li>
-                    <li>4. Leave API Secret empty (not needed for Printful)</li>
-                  </ol>
-                </div>
-              )}
-
-              {configForm.provider === 'spocket' && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h5 className="font-medium text-green-900 mb-2">Spocket Setup Instructions</h5>
-                  <ol className="text-sm text-green-800 space-y-1">
-                    <li>1. Go to your Spocket Dashboard → Settings → API</li>
-                    <li>2. Generate an Access Token</li>
-                    <li>3. Paste it in the API Key field above</li>
-                    <li>4. Leave API Secret empty (not needed for Spocket)</li>
-                  </ol>
-                </div>
-              )}
-
-              {configForm.provider === 'dropcommerce' && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <h5 className="font-medium text-purple-900 mb-2">DropCommerce Setup Instructions</h5>
-                  <ol className="text-sm text-purple-800 space-y-1">
-                    <li>1. Contact DropCommerce support for API access</li>
-                    <li>2. Get your API Key and Secret from your account</li>
-                    <li>3. Enter both API Key and API Secret above</li>
-                    <li>4. API Secret is required for DropCommerce</li>
-                  </ol>
-                </div>
-              )}
-
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
@@ -591,9 +591,4 @@ const DropshippingManager: React.FC = () => {
   );
 };
 
-
-
-
-
-
-export default DropshippingManager
+export default DropshippingManager;
