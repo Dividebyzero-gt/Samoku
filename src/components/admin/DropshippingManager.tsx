@@ -704,10 +704,10 @@ const DropshippingManager: React.FC = () => {
               onChange={(e) => setConfigForm({ ...configForm, provider: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="mock_api">Mock API (Demo)</option>
+              <option value="mock_api">Mock API (Testing)</option>
+              <option value="spocket">Spocket</option>
               <option value="printful">Printful</option>
               <option value="dropcommerce">DropCommerce</option>
-              <option value="spocket">Spocket</option>
             </select>
           </div>
 
