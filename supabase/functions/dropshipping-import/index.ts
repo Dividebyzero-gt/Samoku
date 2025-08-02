@@ -810,6 +810,12 @@ Deno.serve(async (req: Request) => {
                 importedProducts.push(imported);
 
                 // Also create a product record for the main products table
+                const { data: adminStore } = await supabase
+                  .from('stores')
+                  .select('id')
+                  .eq('user_id', user.id)
+                  .single();
+
                 await supabase.from('products').insert({
                   name: product.title,
                   description: product.description,
@@ -818,6 +824,8 @@ Deno.serve(async (req: Request) => {
                   category: product.category,
                   sku: product.sku,
                   stock_quantity: product.stock_level,
+                  owner_id: user.id,
+                  store_id: adminStore?.id,
                   is_dropshipped: true,
                   external_id: product.id,
                   provider: config.provider,

@@ -60,11 +60,21 @@ const DropshippingManager: React.FC = () => {
       
       if (response.success) {
         await loadProducts();
-        alert(`Successfully imported ${response.imported} out of ${response.total} products`);
+        // Show success message
+        const tempDiv = document.createElement('div');
+        tempDiv.className = 'fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg z-50';
+        tempDiv.textContent = `Successfully imported ${response.imported} out of ${response.total} products`;
+        document.body.appendChild(tempDiv);
+        setTimeout(() => document.body.removeChild(tempDiv), 3000);
       }
     } catch (error) {
       console.error('Import failed:', error);
-      alert(`Import failed: ${error.message}`);
+      // Show error message
+      const tempDiv = document.createElement('div');
+      tempDiv.className = 'fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg z-50';
+      tempDiv.textContent = `Import failed: ${error.message}`;
+      document.body.appendChild(tempDiv);
+      setTimeout(() => document.body.removeChild(tempDiv), 3000);
     } finally {
       setImporting(false);
     }
@@ -77,11 +87,21 @@ const DropshippingManager: React.FC = () => {
       
       if (response.success) {
         await loadProducts();
-        alert(`Synced ${response.updated} products. ${response.failed} failed.`);
+        // Show success message
+        const tempDiv = document.createElement('div');
+        tempDiv.className = 'fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg z-50';
+        tempDiv.textContent = `Synced ${response.updated} products. ${response.failed} failed.`;
+        document.body.appendChild(tempDiv);
+        setTimeout(() => document.body.removeChild(tempDiv), 3000);
       }
     } catch (error) {
       console.error('Sync failed:', error);
-      alert(`Sync failed: ${error.message}`);
+      // Show error message
+      const tempDiv = document.createElement('div');
+      tempDiv.className = 'fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg z-50';
+      tempDiv.textContent = `Sync failed: ${error.message}`;
+      document.body.appendChild(tempDiv);
+      setTimeout(() => document.body.removeChild(tempDiv), 3000);
     } finally {
       setSyncing(false);
     }
@@ -96,12 +116,23 @@ const DropshippingManager: React.FC = () => {
         configForm.settings
       );
       
-      alert('API configuration saved successfully');
+      // Show success message
+      const tempDiv = document.createElement('div');
+      tempDiv.className = 'fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg z-50';
+      tempDiv.textContent = 'API configuration saved successfully';
+      document.body.appendChild(tempDiv);
+      setTimeout(() => document.body.removeChild(tempDiv), 3000);
+      
       // Reload products after configuration
       loadProducts();
     } catch (error) {
       console.error('Configuration failed:', error);
-      alert(`Configuration failed: ${error.message}`);
+      // Show error message
+      const tempDiv = document.createElement('div');
+      tempDiv.className = 'fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg z-50';
+      tempDiv.textContent = `Configuration failed: ${error.message}`;
+      document.body.appendChild(tempDiv);
+      setTimeout(() => document.body.removeChild(tempDiv), 3000);
     }
   };
 
