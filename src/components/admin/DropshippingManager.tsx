@@ -12,19 +12,32 @@ import {
   Clock,
   AlertCircle,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  Filter,
+  X,
+  Check
 } from 'lucide-react';
 import { dropshippingService } from '../../services/dropshippingService';
 import { DropshippingProduct, DropshippingConfig } from '../../types/dropshipping';
 
 const DropshippingManager: React.FC = () => {
   const [products, setProducts] = useState<DropshippingProduct[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<DropshippingProduct[]>([]);
   const [config, setConfig] = useState<DropshippingConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'products' | 'import' | 'config' | 'analytics'>('products');
   
+  const [filters, setFilters] = useState({
+    category: '',
+    stockStatus: 'all', // 'all', 'in_stock', 'out_of_stock'
+    provider: '',
+    search: ''
+  });
+
   const [importForm, setImportForm] = useState({
     category: '',
     limit: 20
@@ -41,6 +54,10 @@ const DropshippingManager: React.FC = () => {
     loadProducts();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [products, filters]);
+
   const loadProducts = async () => {
     try {
       setLoading(true);
@@ -51,6 +68,34 @@ const DropshippingManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...products];
+
+    if (filters.category) {
+      filtered = filtered.filter(p => p.category === filters.category);
+    }
+
+    if (filters.stockStatus === 'in_stock') {
+      filtered = filtered.filter(p => p.stockLevel > 0);
+    } else if (filters.stockStatus === 'out_of_stock') {
+      filtered = filtered.filter(p => p.stockLevel === 0);
+    }
+
+    if (filters.provider) {
+      filtered = filtered.filter(p => p.provider === filters.provider);
+    }
+
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(p => 
+        p.title.toLowerCase().includes(searchLower) ||
+        p.sku.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setFilteredProducts(filtered);
   };
 
   const handleImportProducts = async () => {
@@ -107,6 +152,48 @@ const DropshippingManager: React.FC = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedProducts.length === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedProducts.length} selected products?`)) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dropshipping-import?action=bulk_delete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productIds: selectedProducts
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete products');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        await loadProducts();
+        setSelectedProducts([]);
+        showNotification(`Successfully deleted ${result.deleted} products`, 'success');
+      } else {
+        throw new Error(result.error || 'Failed to delete products');
+      }
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      showNotification(`Bulk delete failed: ${error.message}`, 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleDeleteDropshippedProduct = async (productId: string) => {
     if (window.confirm('Are you sure you want to remove this dropshipped product?')) {
       try {
@@ -120,21 +207,11 @@ const DropshippingManager: React.FC = () => {
 
         if (response.success) {
           await loadProducts();
-          // Show success notification
-          const tempDiv = document.createElement('div');
-          tempDiv.className = 'fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg z-50';
-          tempDiv.textContent = 'Product removed successfully';
-          document.body.appendChild(tempDiv);
-          setTimeout(() => document.body.removeChild(tempDiv), 3000);
+          showNotification('Product removed successfully', 'success');
         }
       } catch (error) {
         console.error('Failed to delete product:', error);
-        // Show error notification
-        const tempDiv = document.createElement('div');
-        tempDiv.className = 'fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg z-50';
-        tempDiv.textContent = 'Failed to remove product';
-        document.body.appendChild(tempDiv);
-        setTimeout(() => document.body.removeChild(tempDiv), 3000);
+        showNotification('Failed to remove product', 'error');
       }
     }
   };
@@ -168,14 +245,79 @@ const DropshippingManager: React.FC = () => {
     }
   };
 
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    const tempDiv = document.createElement('div');
+    tempDiv.className = `fixed top-4 right-4 p-4 rounded-lg z-50 ${
+      type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    } text-white`;
+    tempDiv.textContent = message;
+    document.body.appendChild(tempDiv);
+    setTimeout(() => {
+      if (document.body.contains(tempDiv)) {
+        document.body.removeChild(tempDiv);
+      }
+    }, 3000);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
+  const handleSelectProduct = (productId: string) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const spocketCategories = [
+    'Electronics',
+    'Fashion',
+    'Home & Garden',
+    'Health & Beauty',
+    'Sports & Recreation',
+    'Toys & Hobbies',
+    'Automotive',
+    'Baby & Kids',
+    'Pet Supplies',
+    'Books & Media'
+  ];
+
+  const clearFilters = () => {
+    setFilters({
+      category: '',
+      stockStatus: 'all',
+      provider: '',
+      search: ''
+    });
+  };
+
   const renderProductsTab = () => (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Dropshipped Products</h3>
-          <p className="text-gray-600">{products.length} products imported</p>
+          <p className="text-gray-600">
+            {filteredProducts.length} of {products.length} products
+            {selectedProducts.length > 0 && ` • ${selectedProducts.length} selected`}
+          </p>
         </div>
         <div className="flex space-x-3">
+          {selectedProducts.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={deleting}
+              className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>{deleting ? 'Deleting...' : `Delete ${selectedProducts.length}`}</span>
+            </button>
+          )}
           <button
             onClick={handleSyncInventory}
             disabled={syncing}
@@ -187,22 +329,99 @@ const DropshippingManager: React.FC = () => {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Filters:</span>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <select
+              value={filters.category}
+              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="">All Categories</option>
+              {spocketCategories.map(cat => (
+                <option key={cat} value={cat.toLowerCase().replace(/\s+/g, '-')}>{cat}</option>
+              ))}
+            </select>
+
+            <select
+              value={filters.stockStatus}
+              onChange={(e) => setFilters({ ...filters, stockStatus: e.target.value })}
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="all">All Stock Status</option>
+              <option value="in_stock">In Stock</option>
+              <option value="out_of_stock">Out of Stock</option>
+            </select>
+
+            <select
+              value={filters.provider}
+              onChange={(e) => setFilters({ ...filters, provider: e.target.value })}
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="">All Providers</option>
+              <option value="spocket">Spocket</option>
+              <option value="printful">Printful</option>
+              <option value="dropcommerce">DropCommerce</option>
+              <option value="mock_api">Mock API</option>
+            </select>
+
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm w-48"
+            />
+
+            {(filters.category || filters.stockStatus !== 'all' || filters.provider || filters.search) && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center space-x-1 px-2 py-1 text-red-600 hover:text-red-700 text-sm"
+              >
+                <X className="h-3 w-3" />
+                <span>Clear</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-gray-600 mt-4">Loading products...</p>
-        </div>
-      ) : products.length === 0 ? (
+      ) : filteredProducts.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No products imported</h3>
-          <p className="text-gray-600 mb-4">Start by importing products from your dropshipping provider</p>
-          <button
-            onClick={() => setActiveTab('import')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Import Products
-          </button>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {products.length === 0 ? 'No products imported' : 'No products match filters'}
+          </h3>
+          <p className="text-gray-600 mb-4">
+            {products.length === 0 
+              ? 'Start by importing products from your dropshipping provider'
+              : 'Try adjusting your filters to see more products'
+            }
+          </p>
+          {products.length === 0 ? (
+            <button
+              onClick={() => setActiveTab('import')}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Import Products
+            </button>
+          ) : (
+            <button
+              onClick={clearFilters}
+              className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -210,6 +429,14 @@ const DropshippingManager: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Product
                   </th>
@@ -231,8 +458,16 @@ const DropshippingManager: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedProducts.includes(product.id)}
+                        onChange={() => handleSelectProduct(product.id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <img
@@ -280,7 +515,15 @@ const DropshippingManager: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex space-x-2">
                         <button 
-                          onClick={() => window.open(`/products/${product.id}`, '_blank')}
+                          onClick={() => {
+                            // Find the corresponding product in main products table by external_id
+                            const mainProduct = products.find(p => p.externalId === product.externalId);
+                            if (mainProduct) {
+                              window.open(`/products/${mainProduct.id}`, '_blank');
+                            } else {
+                              showNotification('Product not found in main catalog', 'error');
+                            }
+                          }}
                           className="text-blue-600 hover:text-blue-900"
                           title="View Product"
                         >
@@ -300,6 +543,31 @@ const DropshippingManager: React.FC = () => {
               </tbody>
             </table>
           </div>
+          
+          {selectedProducts.length > 0 && (
+            <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">
+                  {selectedProducts.length} products selected
+                </span>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setSelectedProducts([])}
+                    className="text-sm text-gray-600 hover:text-gray-700"
+                  >
+                    Clear selection
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={deleting}
+                    className="bg-red-600 text-white px-4 py-1 rounded text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    {deleting ? 'Deleting...' : 'Delete Selected'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -433,12 +701,9 @@ const DropshippingManager: React.FC = () => {
             <select
               value={configForm.provider}
               onChange={(e) => setConfigForm({ ...configForm, provider: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="mock_api">Mock API (Demo)</option>
-              <option value="printful">Printful</option>
-              <option value="dropcommerce">DropCommerce</option>
-              <option value="spocket">Spocket</option>
+              {spocketCategories.map(cat => (
+                <option key={cat} value={cat.toLowerCase().replace(/\s+/g, '-')}>{cat}</option>
+              ))}
             </select>
           </div>
 
@@ -622,7 +887,7 @@ const DropshippingManager: React.FC = () => {
         <h4 className="text-md font-semibold text-gray-900 mb-4">Category Distribution</h4>
         <div className="space-y-3">
           {Object.entries(
-            products.reduce((acc, product) => {
+            filteredProducts.reduce((acc, product) => {
               acc[product.category] = (acc[product.category] || 0) + 1;
               return acc;
             }, {} as Record<string, number>)
@@ -633,7 +898,7 @@ const DropshippingManager: React.FC = () => {
                 <div className="w-32 bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-blue-600 h-2 rounded-full" 
-                    style={{ width: `${(count / products.length) * 100}%` }}
+                    style={{ width: `${(count / Math.max(filteredProducts.length, 1)) * 100}%` }}
                   ></div>
                 </div>
                 <span className="text-sm font-medium text-gray-900">{count}</span>

@@ -88,11 +88,16 @@ class DropshippingAPI {
 
   private generateProviderMockData(category?: string, limit: number = 50): DropshippingProduct[] {
     const products = [];
-    const productCategories = category ? [category] : ['electronics', 'fashion', 'home-kitchen', 'beauty', 'sports', 'toys'];
+    const spocketCategories = category ? [category] : [
+      'electronics', 'fashion', 'home-garden', 'health-beauty', 
+      'sports-recreation', 'toys-hobbies', 'automotive', 'baby-kids', 
+      'pet-supplies', 'books-media'
+    ];
     
     for (let i = 1; i <= limit; i++) {
-      const selectedCategory = category || productCategories[Math.floor(Math.random() * productCategories.length)];
+      const selectedCategory = category || spocketCategories[Math.floor(Math.random() * spocketCategories.length)];
       const productName = this.generateProductName(selectedCategory, i);
+      const stockLevel = Math.floor(Math.random() * 100) + 20; // Always > 0 for import
       
       products.push({
         id: `${this.provider}_${selectedCategory}_${i}_${Date.now()}`,
@@ -103,7 +108,7 @@ class DropshippingAPI {
         category: selectedCategory,
         tags: [selectedCategory, this.provider, 'premium', 'trending'],
         images: this.getProviderMockImages(selectedCategory),
-        stock_level: Math.floor(Math.random() * 100) + 20,
+        stock_level: stockLevel,
         shipping_time: this.getProviderShippingTime(),
         weight: Math.random() * 3 + 0.2,
         dimensions: {
@@ -115,6 +120,9 @@ class DropshippingAPI {
       });
     }
     
+    // Filter out any products with 0 stock (enforce in-stock only)
+    return products.filter(product => product.stock_level > 0);
+  }
     return products;
   }
 
@@ -128,21 +136,37 @@ class DropshippingAPI {
         'Premium Cotton T-Shirt', 'Classic Denim Jacket', 'Athletic Running Shoes', 'Genuine Leather Handbag', 'Soft Wool Scarf',
         'Elegant Summer Dress', 'Adjustable Baseball Cap', 'Polarized Sunglasses', 'Leather Belt', 'Comfortable Sneakers'
       ],
-      'home-kitchen': [
+      'home-garden': [
         'Automatic Coffee Maker', 'Non-Stick Frying Pan', 'Airtight Storage Container', 'Digital Kitchen Scale', 'High-Speed Blender',
-        'Bamboo Cutting Board', 'Rotating Spice Rack', 'Absorbent Dish Towels', 'Stainless Steel Utensil Set', 'Multi-Function Food Processor'
+        'Bamboo Cutting Board', 'Garden Tool Set', 'Outdoor Solar Lights', 'Plant Watering System', 'Weather-Resistant Cushions'
       ],
-      'beauty': [
+      'health-beauty': [
         'Vitamin C Face Serum', 'Professional Makeup Brush Set', 'Ceramic Hair Styling Tool', 'Moisturizing Body Lotion', 'Hydrating Face Mask',
-        'Matte Lipstick Set', 'Anti-Aging Eye Cream', 'Nourishing Hair Oil', 'Long-Lasting Nail Polish', 'Luxury Perfume'
+        'Fitness Tracker Band', 'Yoga Mat Premium', 'Essential Oil Diffuser', 'Supplement Organizer', 'Natural Face Cleanser'
       ],
-      'sports': [
+      'sports-recreation': [
         'Premium Yoga Mat', 'Exercise Resistance Bands', 'Insulated Water Bottle', 'Quick-Dry Gym Towel', 'Leak-Proof Protein Shaker',
-        'Anti-Burst Exercise Ball', 'Adjustable Dumbbells', 'Speed Jump Rope', 'Smart Fitness Tracker', 'Workout Gloves'
+        'Camping Tent 4-Person', 'Hiking Backpack', 'Fishing Rod Set', 'Basketball Training Kit', 'Swimming Goggles'
       ],
-      'toys': [
+      'toys-hobbies': [
         'Creative Building Blocks', 'Brain Training Puzzle', 'Collectible Action Figure', 'Family Board Game', 'STEM Educational Toy',
-        'Soft Stuffed Animal', 'RC Racing Car', 'Art Supply Kit', 'Kids Musical Instrument', 'Science Experiment Kit'
+        'Remote Control Drone', 'Model Train Set', 'Paint by Numbers Kit', 'Craft Supply Bundle', 'DIY Robot Kit'
+      ],
+      'automotive': [
+        'Car Phone Mount', 'Dash Cam HD', 'Tire Pressure Gauge', 'Car Vacuum Cleaner', 'Emergency Road Kit',
+        'Bluetooth Car Adapter', 'Car Air Freshener', 'Steering Wheel Cover', 'Car Organizer', 'LED Headlight Bulbs'
+      ],
+      'baby-kids': [
+        'Baby Monitor Camera', 'Educational Learning Tablet', 'Kids Safety Helmet', 'Toddler Training Cup', 'Baby Carrier Wrap',
+        'Children Backpack', 'Kids Art Easel', 'Baby Bath Toys', 'Toddler Shoes', 'Kids Night Light'
+      ],
+      'pet-supplies': [
+        'Dog Training Collar', 'Cat Scratching Post', 'Pet Grooming Kit', 'Automatic Pet Feeder', 'Pet Carrier Bag',
+        'Dog Chew Toys', 'Cat Litter Box', 'Pet Water Fountain', 'Dog Leash Retractable', 'Pet Bed Memory Foam'
+      ],
+      'books-media': [
+        'Educational Workbook', 'Audio Book Collection', 'Digital Magazine Subscription', 'Language Learning Course', 'Cookbook Collection',
+        'Art History Book', 'Science Encyclopedia', 'Music Theory Guide', 'Photography Tutorial', 'Business Strategy Book'
       ]
     };
     
@@ -780,11 +804,14 @@ Deno.serve(async (req: Request) => {
         const api = new DropshippingAPI(config.provider, config.api_key, config.api_secret);
         const products = await api.getProducts(category, limit || 50);
 
+        // Filter out products with 0 stock before importing
+        const inStockProducts = products.filter(product => product.stock_level > 0);
+
         // Import products to database
         const importedProducts = [];
         const errors = [];
 
-        for (const product of products) {
+        for (const product of inStockProducts) {
           try {
             const { data: existingProduct } = await supabase
               .from('dropshipping_products')
@@ -863,7 +890,7 @@ Deno.serve(async (req: Request) => {
           operation_type: 'product_import',
           provider: config.provider,
           status: errors.length === 0 ? 'success' : errors.length < products.length ? 'partial' : 'error',
-          products_processed: products.length,
+          products_processed: inStockProducts.length,
           products_updated: importedProducts.length,
           products_failed: errors.length,
           error_details: errors.length > 0 ? { errors } : null
@@ -873,7 +900,8 @@ Deno.serve(async (req: Request) => {
           JSON.stringify({
             success: true,
             imported: importedProducts.length,
-            total: products.length,
+            total: inStockProducts.length,
+            filtered_out: products.length - inStockProducts.length,
             errors: errors.length,
             products: importedProducts
           }),
