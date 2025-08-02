@@ -395,6 +395,7 @@ const DropshippingManager: React.FC = () => {
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-gray-600 mt-4">Loading products...</p>
+        </div>
       ) : filteredProducts.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -701,9 +702,12 @@ const DropshippingManager: React.FC = () => {
             <select
               value={configForm.provider}
               onChange={(e) => setConfigForm({ ...configForm, provider: e.target.value })}
-              {spocketCategories.map(cat => (
-                <option key={cat} value={cat.toLowerCase().replace(/\s+/g, '-')}>{cat}</option>
-              ))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="mock_api">Mock API (Demo)</option>
+              <option value="printful">Printful</option>
+              <option value="dropcommerce">DropCommerce</option>
+              <option value="spocket">Spocket</option>
             </select>
           </div>
 
@@ -887,7 +891,7 @@ const DropshippingManager: React.FC = () => {
         <h4 className="text-md font-semibold text-gray-900 mb-4">Category Distribution</h4>
         <div className="space-y-3">
           {Object.entries(
-            filteredProducts.reduce((acc, product) => {
+            products.reduce((acc, product) => {
               acc[product.category] = (acc[product.category] || 0) + 1;
               return acc;
             }, {} as Record<string, number>)
@@ -898,7 +902,7 @@ const DropshippingManager: React.FC = () => {
                 <div className="w-32 bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-blue-600 h-2 rounded-full" 
-                    style={{ width: `${(count / Math.max(filteredProducts.length, 1)) * 100}%` }}
+                    style={{ width: `${(count / products.length) * 100}%` }}
                   ></div>
                 </div>
                 <span className="text-sm font-medium text-gray-900">{count}</span>
