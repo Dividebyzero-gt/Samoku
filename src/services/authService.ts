@@ -132,7 +132,7 @@ class AuthService {
       });
       
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Authentication timeout')), 30000)
+        setTimeout(() => reject(new Error('Authentication timeout')), 60000)
       );
       
       const { data: authData, error: authError } = await Promise.race([
