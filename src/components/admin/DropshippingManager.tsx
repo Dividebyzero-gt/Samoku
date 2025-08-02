@@ -111,10 +111,9 @@ const DropshippingManager: React.FC = () => {
     if (window.confirm('Are you sure you want to remove this dropshipped product?')) {
       try {
         // Delete from dropshipping_products and main products table
-        const response = await dropshippingService.makeRequest('dropshipping-import', {
+        const response = await dropshippingService.makeRequest('dropshipping-import?action=delete_product', {
           method: 'POST',
           body: JSON.stringify({
-            action: 'delete_product',
             productId
           })
         });
