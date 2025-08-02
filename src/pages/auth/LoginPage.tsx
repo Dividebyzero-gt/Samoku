@@ -32,7 +32,7 @@ const LoginPage: React.FC = () => {
       // Add client-side timeout
       const loginPromise = login({ email, password });
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Login process timeout')), 20000)
+        setTimeout(() => reject(new Error('Login process timeout')), 40000)
       );
       
       const success = await Promise.race([

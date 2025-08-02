@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Add timeout protection
       const loginPromise = authService.signIn(credentials);
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Login timeout')), 15000)
+        setTimeout(() => reject(new Error('Login timeout')), 35000)
       );
       
       setLoading(true);
