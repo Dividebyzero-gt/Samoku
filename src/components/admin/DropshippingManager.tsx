@@ -107,6 +107,39 @@ const DropshippingManager: React.FC = () => {
     }
   };
 
+  const handleDeleteDropshippedProduct = async (productId: string) => {
+    if (window.confirm('Are you sure you want to remove this dropshipped product?')) {
+      try {
+        // Delete from dropshipping_products and main products table
+        const response = await dropshippingService.makeRequest('dropshipping-import', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'delete_product',
+            productId
+          })
+        });
+
+        if (response.success) {
+          await loadProducts();
+          // Show success notification
+          const tempDiv = document.createElement('div');
+          tempDiv.className = 'fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg z-50';
+          tempDiv.textContent = 'Product removed successfully';
+          document.body.appendChild(tempDiv);
+          setTimeout(() => document.body.removeChild(tempDiv), 3000);
+        }
+      } catch (error) {
+        console.error('Failed to delete product:', error);
+        // Show error notification
+        const tempDiv = document.createElement('div');
+        tempDiv.className = 'fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg z-50';
+        tempDiv.textContent = 'Failed to remove product';
+        document.body.appendChild(tempDiv);
+        setTimeout(() => document.body.removeChild(tempDiv), 3000);
+      }
+    }
+  };
+
   const handleConfigureAPI = async () => {
     try {
       await dropshippingService.configureAPI(
@@ -223,17 +256,26 @@ const DropshippingManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{product.stockLevel}</div>
-                      <div className="text-xs text-gray-500">
-                        Synced: {new Date(product.lastSynced).toLocaleDateString()}
-                      </div>
+                     {product.lastSynced && (
+                       <div className="text-xs text-gray-500">
+                         Synced: {(() => {
+                           try {
+                             const date = new Date(product.lastSynced);
+                             return isNaN(date.getTime()) ? 'Never' : date.toLocaleDateString();
+                           } catch {
+                             return 'Never';
+                           }
+                         })()}
+                       </div>
+                     )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        product.isActive && product.stockLevel > 0
+                       product.stockLevel > 0
                           ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {product.isActive && product.stockLevel > 0 ? 'Available' : 'Out of Stock'}
+                       {product.stockLevel > 0 ? 'In Stock' : 'Out of Stock'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

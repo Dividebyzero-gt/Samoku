@@ -811,7 +811,8 @@ Deno.serve(async (req: Request) => {
 
                 // Also create a product record for the main products table
                 const { data: adminStore } = await supabase
-                  .from('stores')
+                   is_active: true,
+                   last_synced: new Date().toISOString()
                   .select('id')
                   .eq('user_id', user.id)
                   .single();
@@ -906,7 +907,8 @@ Deno.serve(async (req: Request) => {
               .from('dropshipping_products')
               .update({ 
                 stock_level: stockLevel,
-                last_synced: new Date().toISOString() 
+               last_synced: new Date().toISOString(),
+               is_active: stockLevel > 0
               })
               .eq('id', product.id);
 
@@ -914,7 +916,8 @@ Deno.serve(async (req: Request) => {
             await supabase
               .from('products')
               .update({ 
-                stock_quantity: stockLevel 
+                stock_quantity: stockLevel,
+                is_active: stockLevel > 0
               })
               .eq('external_id', product.external_id)
               .eq('is_dropshipped', true);
@@ -1063,6 +1066,43 @@ Deno.serve(async (req: Request) => {
 
         return new Response(
           JSON.stringify({ order }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      case 'delete_product': {
+        const { productId } = requestData;
+
+        if (!productId) {
+          throw new Error('Product ID required');
+        }
+
+        // Delete from dropshipping_products table
+        const { error: dropshippingError } = await supabase
+          .from('dropshipping_products')
+          .delete()
+          .eq('id', productId);
+
+        if (dropshippingError) {
+          throw dropshippingError;
+        }
+
+        // Delete from main products table
+        const { error: productsError } = await supabase
+          .from('products')
+          .delete()
+          .eq('external_id', productId)
+          .eq('is_dropshipped', true);
+
+        if (productsError) {
+          console.error('Failed to delete from products table:', productsError);
+          // Don't throw error, as main deletion succeeded
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }

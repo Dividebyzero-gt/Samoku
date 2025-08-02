@@ -566,15 +566,24 @@ const EnhancedAdminDashboard: React.FC = () => {
                         <Link 
                           to={`/products/${product.id}`}
                           className="text-blue-600 hover:text-blue-900"
+                          title="View Product"
                         >
                           <Eye className="h-4 w-4" />
                         </Link>
-                        <button className="text-gray-600 hover:text-gray-900">
+                        <button 
+                          className="text-gray-600 hover:text-gray-900"
+                          title="Edit Product"
+                          onClick={() => {
+                            // Navigate to edit page when implemented
+                            console.log('Edit product:', product.id);
+                          }}
+                        >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleDeleteProduct(product.id)}
                           className="text-red-600 hover:text-red-900"
+                          title="Delete Product"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
