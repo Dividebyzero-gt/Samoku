@@ -40,57 +40,151 @@ class DropshippingAPI {
 
   async getProducts(category?: string, limit: number = 50): Promise<DropshippingProduct[]> {
     try {
-      // Note: External API calls are not supported in WebContainer environment
-      // For production deployment, this would make real API calls
-      console.log(`Simulating ${this.provider} API call for category: ${category}, limit: ${limit}`);
+      console.log(`Making real API call to ${this.provider} for category: ${category}, limit: ${limit}`);
       
-      // Return mock data that simulates real provider responses
-      return this.generateProviderMockData(category, limit);
+      // Make real API call to provider
+      const endpoint = this.getProductsEndpoint();
+      const url = this.getApiUrl(endpoint);
+      const params = new URLSearchParams();
+      
+      if (category) {
+        const providerCategory = this.mapCategoryToProvider(category);
+        if (providerCategory) {
+          params.append('category', providerCategory);
+        }
+      }
+      
+      if (limit) {
+        params.append('limit', limit.toString());
+      }
+      
+      // Add production-specific parameters
+      this.addProductionParams(params);
+      
+      const finalUrl = params.toString() ? `${url}?${params.toString()}` : url;
+      
+      const response = await fetch(finalUrl, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`${this.provider} API response:`, data);
+      
+      // Transform the API response to our format
+      const products = this.transformProducts(data);
+      
+      // Filter out products with no stock
+      const inStockProducts = products.filter(product => product.stock_level > 0);
+      
+      console.log(`Imported ${inStockProducts.length} products with stock from ${products.length} total`);
+      return inStockProducts;
     } catch (error) {
       console.error(`${this.provider} API error:`, error);
-      // Fallback to mock data if API call fails
-      console.log(`Falling back to mock data for ${this.provider}`);
-      return this.generateProviderMockData(category, limit);
+      
+      // Only use mock data if explicitly using mock_api provider
+      if (this.provider === 'mock_api') {
+        console.log(`Using mock data for ${this.provider}`);
+        return this.generateProviderMockData(category, limit);
+      }
+      
+      // For real providers, throw the error instead of falling back to mock data
+      throw new Error(`Failed to fetch products from ${this.provider}: ${error.message}`);
     }
   }
 
   async getProductStock(productId: string): Promise<number> {
     try {
-      // Simulate stock level for demo purposes
-      console.log(`Simulating stock check for ${this.provider} product: ${productId}`);
-      return Math.floor(Math.random() * 100) + 10; // Random stock between 10-110
+      console.log(`Checking real stock for ${this.provider} product: ${productId}`);
+      
+      if (this.provider === 'mock_api') {
+        return Math.floor(Math.random() * 100) + 10; // Random stock for testing
+      }
+      
+      // Make real API call to get stock level
+      const endpoint = this.getProductEndpoint(productId);
+      const url = this.getApiUrl(endpoint);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Stock check failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return this.extractStockFromResponse(data);
     } catch (error) {
       console.error(`Stock check failed for ${this.provider}:`, error);
-      return 0; // Return 0 if stock check fails
+      
+      if (this.provider === 'mock_api') {
+        return Math.floor(Math.random() * 50); // Fallback for mock
+      }
+      
+      throw error; // Don't hide real API errors
     }
   }
 
   async createOrder(orderData: any): Promise<{ orderId: string; trackingNumber?: string }> {
     try {
-      // Simulate order creation for demo purposes
-      console.log(`Simulating order creation for ${this.provider}:`, orderData);
+      console.log(`Creating real order for ${this.provider}:`, orderData);
       
-      const mockOrderId = `${this.provider.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const mockTrackingNumber = `TRK${Math.random().toString().substr(2, 10)}`;
+      if (this.provider === 'mock_api') {
+        // Mock implementation for testing
+        const mockOrderId = `${this.provider.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const mockTrackingNumber = `TRK${Math.random().toString().substr(2, 10)}`;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return { orderId: mockOrderId, trackingNumber: mockTrackingNumber };
+      }
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Make real API call to create order
+      const endpoint = this.getOrdersEndpoint();
+      const url = this.getApiUrl(endpoint);
+      const transformedData = this.transformOrderData(orderData);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(transformedData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Order creation failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
       
       return {
-        orderId: mockOrderId,
-        trackingNumber: mockTrackingNumber
+        orderId: this.extractOrderId(data),
+        trackingNumber: this.extractTrackingNumber(data)
       };
     } catch (error) {
       console.error(`Order creation failed for ${this.provider}:`, error);
-      throw error;
+      
+      if (this.provider === 'mock_api') {
+        throw error; // Let mock errors bubble up
+      }
+      
+      throw new Error(`Failed to create order with ${this.provider}: ${error.message}`);
     }
   }
 
   private generateProviderMockData(category?: string, limit: number = 50): DropshippingProduct[] {
+    // Only generate mock data for mock_api provider
+    if (this.provider !== 'mock_api') {
+      throw new Error(`Mock data generation called for real provider: ${this.provider}`);
+    }
+    
     const products = [];
     const spocketCategories = category ? [category] : [
-      'electronics', 'fashion', 'home-garden', 'health-beauty', 
-      'sports-recreation', 'toys-hobbies', 'automotive', 'baby-kids', 
+      'electronics', 'fashion', 'home-garden', 'health-beauty',
+      'sports-recreation', 'toys-hobbies', 'automotive', 'baby-kids',
       'pet-supplies', 'books-media'
     ];
     
@@ -418,28 +512,40 @@ class DropshippingAPI {
   private mapCategoryToProvider(category: string): string | null {
     const categoryMap: Record<string, Record<string, string>> = {
       'printful': {
-        'electronics': 'accessories',
-        'fashion': 'clothing',
-        'home-kitchen': 'home-living',
-        'beauty': 'accessories',
-        'sports': 'clothing',
-        'toys': 'accessories'
+        'electronics': 'phone-cases',
+        'fashion': 'mens-clothing',
+        'home-garden': 'home-living',
+        'health-beauty': 'accessories',
+        'sports-recreation': 'bags',
+        'toys-hobbies': 'accessories',
+        'automotive': 'accessories',
+        'baby-kids': 'kids-clothing',
+        'pet-supplies': 'accessories',
+        'books-media': 'accessories'
       },
       'spocket': {
-        'electronics': 'Electronics',
-        'fashion': 'Fashion',
-        'home-kitchen': 'Home & Garden',
-        'beauty': 'Health & Beauty',
-        'sports': 'Sports & Recreation',
-        'toys': 'Toys & Hobbies'
+        'electronics': 'electronics',
+        'fashion': 'fashion',
+        'home-garden': 'home-garden',
+        'health-beauty': 'health-beauty',
+        'sports-recreation': 'sports-recreation',
+        'toys-hobbies': 'toys-hobbies',
+        'automotive': 'automotive',
+        'baby-kids': 'baby-kids',
+        'pet-supplies': 'pet-supplies',
+        'books-media': 'books-media'
       },
       'dropcommerce': {
         'electronics': 'electronics',
         'fashion': 'apparel',
-        'home-kitchen': 'home-garden',
-        'beauty': 'health-beauty',
-        'sports': 'sports-outdoors',
-        'toys': 'toys-games'
+        'home-garden': 'home-garden',
+        'health-beauty': 'health-beauty',
+        'sports-recreation': 'sports-outdoors',
+        'toys-hobbies': 'toys-games',
+        'automotive': 'automotive',
+        'baby-kids': 'baby-kids',
+        'pet-supplies': 'pet-supplies',
+        'books-media': 'books-media'
       }
     };
 
@@ -814,9 +920,19 @@ Deno.serve(async (req: Request) => {
           throw new Error('Dropshipping API not configured');
         }
 
+        console.log(`Import request for provider: ${config.provider}, category: ${category}, limit: ${limit}`);
+        
         // Initialize API with stored credentials
         const api = new DropshippingAPI(config.provider, config.api_key, config.api_secret);
-        const products = await api.getProducts(category, limit || 50);
+        
+        let products;
+        try {
+          products = await api.getProducts(category, limit || 50);
+          console.log(`Successfully fetched ${products.length} products from ${config.provider}`);
+        } catch (error) {
+          console.error(`Failed to fetch products from ${config.provider}:`, error);
+          throw new Error(`Failed to import products: ${error.message}`);
+        }
 
         // Filter out products with 0 stock before importing
         const inStockProducts = products.filter(product => product.stock_level > 0);
