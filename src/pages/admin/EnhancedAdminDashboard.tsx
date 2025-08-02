@@ -27,7 +27,7 @@ import {
 import { useRoleAccess } from '../../hooks/useRoleAccess';
 import RoleGuard from '../../components/auth/RoleGuard';
 import DropshippingManager from '../../components/admin/DropshippingManager';
-import { useAuth } from '../../contexts/AuthContext';</parameter>
+import { useAuth } from '../../contexts/AuthContext';
 
 const EnhancedAdminDashboard: React.FC = () => {
   const { isAdmin, canManageDropshipping, canManageUsers } = useRoleAccess();
