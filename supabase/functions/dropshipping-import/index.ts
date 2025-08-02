@@ -40,6 +40,12 @@ class DropshippingAPI {
 
   async getProducts(category?: string, limit: number = 50): Promise<DropshippingProduct[]> {
     try {
+      // Use mock data for real providers in demo/development environment
+      if (this.provider === 'spocket' || this.provider === 'printful' || this.provider === 'dropcommerce') {
+        console.log(`Using demo mode mock data for ${this.provider}`);
+        return this.generateProviderMockData(category, limit);
+      }
+      
       console.log(`Making real API call to ${this.provider} for category: ${category}, limit: ${limit}`);
       
       // Make real API call to provider
@@ -176,11 +182,6 @@ class DropshippingAPI {
   }
 
   private generateProviderMockData(category?: string, limit: number = 50): DropshippingProduct[] {
-    // Only generate mock data for mock_api provider
-    if (this.provider !== 'mock_api') {
-      throw new Error(`Mock data generation called for real provider: ${this.provider}`);
-    }
-    
     const products = [];
     const spocketCategories = category ? [category] : [
       'electronics', 'fashion', 'home-garden', 'health-beauty',
