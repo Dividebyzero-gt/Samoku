@@ -280,10 +280,18 @@ const DropshippingManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <button 
+                          onClick={() => window.open(`/products/${product.id}`, '_blank')}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="View Product"
+                        >
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button 
+                          onClick={() => handleDeleteDropshippedProduct(product.id)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Delete Product"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>

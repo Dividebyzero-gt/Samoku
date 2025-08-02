@@ -121,35 +121,35 @@ class DropshippingAPI {
   private generateProductName(category: string, index: number): string {
     const productNames: Record<string, string[]> = {
       'electronics': [
-        'Premium Wireless Headphones', 'Smart Watch Pro', 'Bluetooth Speaker', 'USB-C Hub', 'Phone Camera Lens',
-        'Wireless Charger', 'Gaming Mouse', 'LED Desk Lamp', 'Power Bank', 'Bluetooth Earbuds'
+        'Premium Wireless Headphones', 'Smart Watch Pro', 'Bluetooth Speaker', 'USB-C Hub', 'Phone Camera Lens Kit',
+        'Wireless Charging Pad', 'Gaming Mouse', 'LED Desk Lamp', 'Portable Power Bank', 'Bluetooth Earbuds'
       ],
       'fashion': [
-        'Cotton T-Shirt', 'Denim Jacket', 'Running Shoes', 'Leather Handbag', 'Wool Scarf',
-        'Summer Dress', 'Baseball Cap', 'Sunglasses', 'Belt', 'Sneakers'
+        'Premium Cotton T-Shirt', 'Classic Denim Jacket', 'Athletic Running Shoes', 'Genuine Leather Handbag', 'Soft Wool Scarf',
+        'Elegant Summer Dress', 'Adjustable Baseball Cap', 'Polarized Sunglasses', 'Leather Belt', 'Comfortable Sneakers'
       ],
       'home-kitchen': [
-        'Coffee Maker', 'Non-Stick Pan', 'Storage Container', 'Kitchen Scale', 'Blender',
-        'Cutting Board', 'Spice Rack', 'Dish Towels', 'Utensil Set', 'Food Processor'
+        'Automatic Coffee Maker', 'Non-Stick Frying Pan', 'Airtight Storage Container', 'Digital Kitchen Scale', 'High-Speed Blender',
+        'Bamboo Cutting Board', 'Rotating Spice Rack', 'Absorbent Dish Towels', 'Stainless Steel Utensil Set', 'Multi-Function Food Processor'
       ],
       'beauty': [
-        'Face Serum', 'Makeup Brush Set', 'Hair Styling Tool', 'Body Lotion', 'Face Mask',
-        'Lipstick Set', 'Eye Cream', 'Hair Oil', 'Nail Polish', 'Perfume'
+        'Vitamin C Face Serum', 'Professional Makeup Brush Set', 'Ceramic Hair Styling Tool', 'Moisturizing Body Lotion', 'Hydrating Face Mask',
+        'Matte Lipstick Set', 'Anti-Aging Eye Cream', 'Nourishing Hair Oil', 'Long-Lasting Nail Polish', 'Luxury Perfume'
       ],
       'sports': [
-        'Yoga Mat', 'Resistance Bands', 'Water Bottle', 'Gym Towel', 'Protein Shaker',
-        'Exercise Ball', 'Dumbbells', 'Jump Rope', 'Fitness Tracker', 'Sports Gloves'
+        'Premium Yoga Mat', 'Exercise Resistance Bands', 'Insulated Water Bottle', 'Quick-Dry Gym Towel', 'Leak-Proof Protein Shaker',
+        'Anti-Burst Exercise Ball', 'Adjustable Dumbbells', 'Speed Jump Rope', 'Smart Fitness Tracker', 'Workout Gloves'
       ],
       'toys': [
-        'Building Blocks', 'Puzzle Game', 'Action Figure', 'Board Game', 'Educational Toy',
-        'Stuffed Animal', 'Remote Control Car', 'Art Supplies', 'Musical Instrument', 'Science Kit'
+        'Creative Building Blocks', 'Brain Training Puzzle', 'Collectible Action Figure', 'Family Board Game', 'STEM Educational Toy',
+        'Soft Stuffed Animal', 'RC Racing Car', 'Art Supply Kit', 'Kids Musical Instrument', 'Science Experiment Kit'
       ]
     };
     
     const categoryProducts = productNames[category] || productNames['electronics'];
     const baseName = categoryProducts[index % categoryProducts.length];
     
-    return `${this.provider} ${baseName} ${Math.floor(Math.random() * 100) + 1}`;
+    return `${baseName}`;
   }
 
   private getProviderMockImages(category: string): string[] {
@@ -323,7 +323,7 @@ class DropshippingAPI {
     const products = data.result || data.data || [];
     return products.map((item: any) => ({
       id: item.sync_product?.id?.toString() || item.id?.toString() || `printful_${Date.now()}_${Math.random()}`,
-      title: item.sync_product?.name || item.name || item.title || 'Untitled Product',
+      title: this.cleanProductTitle(item.sync_product?.name || item.name || item.title || 'Untitled Product'),
       description: item.sync_product?.description || item.description || 'No description available',
       price: this.parsePrice(item.sync_variants?.[0]?.retail_price || item.retail_price || item.price || '0'),
       sku: item.sync_variants?.[0]?.sku || item.sku || `PRINT_${item.id}`,
@@ -342,7 +342,7 @@ class DropshippingAPI {
     const products = data.data?.products || data.products || data.data || [];
     return products.map((item: any) => ({
       id: item.id?.toString() || `spocket_${Date.now()}_${Math.random()}`,
-      title: item.name || item.title || 'Untitled Product',
+      title: this.cleanProductTitle(item.name || item.title || 'Untitled Product'),
       description: item.description || item.short_description || item.body_html || 'No description available',
       price: this.parsePrice(item.variants?.[0]?.price || item.retail_price || item.price || '0'),
       sku: item.sku || `SPKT_${item.id}`,
@@ -361,7 +361,7 @@ class DropshippingAPI {
     const products = data.data?.products || data.products || data.data || data.results || [];
     return products.map((item: any) => ({
       id: item.id?.toString() || `dropcom_${Date.now()}_${Math.random()}`,
-      title: item.title || item.name || 'Untitled Product',
+      title: this.cleanProductTitle(item.title || item.name || 'Untitled Product'),
       description: item.description || item.body_html || item.short_description || 'No description available',
       price: this.parsePrice(item.variants?.[0]?.price || item.price || item.retail_price || '0'),
       sku: item.variants?.[0]?.sku || item.sku || item.vendor_sku || `DC_${item.id}`,
@@ -549,6 +549,19 @@ class DropshippingAPI {
     }
     
     return [...new Set(images)];
+  }
+
+  private cleanProductTitle(title: string): string {
+    if (!title) return 'Untitled Product';
+    
+    // Remove common provider names and prefixes
+    const cleanTitle = title
+      .replace(/^(Spocket|Printful|DropCommerce|Mock API)\s+/i, '') // Remove provider names from start
+      .replace(/\s+(by\s+)?(Spocket|Printful|DropCommerce|Mock API)$/i, '') // Remove from end
+      .replace(/\s+\d+$/, '') // Remove trailing numbers like " 42"
+      .trim();
+    
+    return cleanTitle || 'Untitled Product';
   }
 
   private transformOrderData(orderData: any): any {
