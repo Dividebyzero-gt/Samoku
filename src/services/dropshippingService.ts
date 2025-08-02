@@ -1,17 +1,22 @@
 import { DropshippingProduct, DropshippingOrder, ImportProductsRequest, ImportProductsResponse, SyncInventoryResponse, FulfillOrderRequest, FulfillOrderResponse, DropshippingConfig } from '../types/dropshipping';
+import { supabase } from '../lib/supabase';
 
 class DropshippingService {
   private baseUrl: string;
-  private apiKey: string;
 
   constructor() {
     this.baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-    this.apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      throw new Error('No authenticated session found');
+    }
+
     const headers = {
-      'Authorization': `Bearer ${this.apiKey}`,
+      'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
       ...options.headers,
     };
