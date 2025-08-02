@@ -39,83 +39,100 @@ class DropshippingAPI {
   }
 
   async getProducts(category?: string, limit: number = 50): Promise<DropshippingProduct[]> {
-    // This would be replaced with actual API calls to providers like:
-    // - Printful API
-    // - Spocket API
-    // - DropCommerce API
-    // - Modalyst API
-    // etc.
+    try {
+      const apiUrl = this.getApiUrl('products');
+      const headers = this.getHeaders();
 
-    const apiUrl = this.getApiUrl('products');
-    const headers = this.getHeaders();
+      const params = new URLSearchParams();
+      if (category) {
+        // Map our categories to provider-specific categories
+        const providerCategory = this.mapCategoryToProvider(category);
+        if (providerCategory) params.append('category', providerCategory);
+      }
+      params.append('limit', limit.toString());
 
-    const params = new URLSearchParams();
-    if (category) params.append('category', category);
-    params.append('limit', limit.toString());
+      const response = await fetch(`${apiUrl}?${params}`, {
+        method: 'GET',
+        headers
+      });
 
-    const response = await fetch(`${apiUrl}?${params}`, {
-      method: 'GET',
-      headers
-    });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API request failed (${response.status}): ${errorText}`);
+      }
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+      const data = await response.json();
+      
+      // Transform the response based on the provider's format
+      return this.transformProducts(data);
+    } catch (error) {
+      console.error(`${this.provider} API error:`, error);
+      throw new Error(`Failed to fetch products from ${this.provider}: ${error.message}`);
     }
-
-    const data = await response.json();
-    
-    // Transform the response based on the provider's format
-    return this.transformProducts(data);
   }
 
   async getProductStock(productId: string): Promise<number> {
-    const apiUrl = this.getApiUrl(`products/${productId}/stock`);
-    const headers = this.getHeaders();
+    try {
+      const apiUrl = this.getApiUrl(`products/${productId}`);
+      const headers = this.getHeaders();
 
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers
-    });
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers
+      });
 
-    if (!response.ok) {
-      throw new Error(`Stock check failed: ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Stock check failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return this.extractStockFromResponse(data);
+    } catch (error) {
+      console.error(`Stock check failed for ${this.provider}:`, error);
+      return 0; // Return 0 if stock check fails
     }
-
-    const data = await response.json();
-    return data.stock || 0;
   }
 
   async createOrder(orderData: any): Promise<{ orderId: string; trackingNumber?: string }> {
-    const apiUrl = this.getApiUrl('orders');
-    const headers = this.getHeaders();
+    try {
+      const apiUrl = this.getApiUrl('orders');
+      const headers = this.getHeaders();
+      const transformedData = this.transformOrderData(orderData);
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(this.transformOrderData(orderData))
-    });
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(transformedData)
+      });
 
-    if (!response.ok) {
-      throw new Error(`Order creation failed: ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Order creation failed (${response.status}): ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      return {
+        orderId: this.extractOrderId(data),
+        trackingNumber: this.extractTrackingNumber(data)
+      };
+    } catch (error) {
+      console.error(`Order creation failed for ${this.provider}:`, error);
+      throw error;
     }
-
-    const data = await response.json();
-    
-    return {
-      orderId: data.id || data.order_id,
-      trackingNumber: data.tracking_number
-    };
   }
 
   private getApiUrl(endpoint: string): string {
     // Configure API URLs based on provider
     switch (this.provider) {
       case 'printful':
-        return `https://api.printful.com/${endpoint}`;
+        return `https://api.printful.com/store/${endpoint}`;
       case 'spocket':
-        return `https://api.spocket.co/api/v1/${endpoint}`;
+        return `https://api.spocket.co/v2/${endpoint}`;
       case 'dropcommerce':
-        return `https://api.dropcommerce.com/v1/${endpoint}`;
+        return `https://api.dropcommerce.com/api/v2/${endpoint}`;
+      case 'mock_api':
+        return `https://api.mockdropship.com/v1/${endpoint}`;
       default:
         throw new Error(`Unknown provider: ${this.provider}`);
     }
@@ -129,13 +146,19 @@ class DropshippingAPI {
     // Configure authentication headers based on provider
     switch (this.provider) {
       case 'printful':
-        headers['Authorization'] = `Bearer ${this.apiKey}`;
+        headers['Authorization'] = `Basic ${btoa(this.apiKey)}`;
         break;
       case 'spocket':
-        headers['Authorization'] = `Bearer ${this.apiKey}`;
+        headers['X-Spocket-Access-Token'] = this.apiKey;
         break;
       case 'dropcommerce':
         headers['X-API-Key'] = this.apiKey;
+        if (this.apiSecret) {
+          headers['X-API-Secret'] = this.apiSecret;
+        }
+        break;
+      case 'mock_api':
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
         break;
     }
 
@@ -149,42 +172,279 @@ class DropshippingAPI {
         return this.transformPrintfulProducts(data);
       case 'spocket':
         return this.transformSpocketProducts(data);
+      case 'dropcommerce':
+        return this.transformDropCommerceProducts(data);
+      case 'mock_api':
+        return this.generateMockProducts(data);
       default:
-        return data.products || data || [];
+        return Array.isArray(data) ? data : data.products || data.data || [];
     }
   }
 
   private transformPrintfulProducts(data: any): DropshippingProduct[] {
-    return (data.result || []).map((item: any) => ({
-      id: item.id.toString(),
-      title: item.name,
-      description: item.description || '',
-      price: parseFloat(item.price) || 0,
-      sku: item.sku || '',
-      category: item.category?.name || 'general',
-      tags: item.tags || [],
-      images: item.files?.map((f: any) => f.preview_url) || [],
-      stock_level: item.quantity || 0,
+    const products = data.result || data.products || [];
+    return products.map((item: any) => ({
+      id: item.id?.toString() || `printful_${Date.now()}_${Math.random()}`,
+      title: item.name || item.title || 'Untitled Product',
+      description: item.description || 'No description available',
+      price: this.parsePrice(item.retail_price || item.price || '0'),
+      sku: item.sku || `PRINT_${item.id}`,
+      category: this.mapPrintfulCategory(item.category_name || item.category),
+      tags: this.extractTags(item.tags || item.type),
+      images: this.extractPrintfulImages(item),
+      stock_level: parseInt(item.quantity) || 999, // Printful typically has unlimited stock
       shipping_time: '7-14 business days',
-      weight: item.weight || 0,
-      variants: item.variants || []
+      weight: parseFloat(item.weight) || 0,
+      dimensions: item.dimensions || null,
+      variants: item.variants || item.sync_variants || []
     }));
   }
 
   private transformSpocketProducts(data: any): DropshippingProduct[] {
-    return (data.products || []).map((item: any) => ({
-      id: item.id.toString(),
-      title: item.name,
-      description: item.description || '',
-      price: parseFloat(item.price) || 0,
-      sku: item.sku || '',
-      category: item.category || 'general',
-      tags: item.tags || [],
-      images: item.images || [],
-      stock_level: item.inventory || 0,
-      shipping_time: item.shipping_time || '5-10 business days',
-      weight: item.weight || 0
+    const products = data.products || data.data || [];
+    return products.map((item: any) => ({
+      id: item.id?.toString() || `spocket_${Date.now()}_${Math.random()}`,
+      title: item.name || item.title || 'Untitled Product',
+      description: item.description || item.short_description || 'No description available',
+      price: this.parsePrice(item.retail_price || item.price || '0'),
+      sku: item.sku || `SPKT_${item.id}`,
+      category: this.mapSpocketCategory(item.category || item.product_category),
+      tags: this.extractTags(item.tags || item.keywords),
+      images: Array.isArray(item.images) ? item.images : [item.main_image].filter(Boolean),
+      stock_level: parseInt(item.inventory_count || item.inventory) || 0,
+      shipping_time: this.parseShippingTime(item.shipping_time || item.processing_time),
+      weight: parseFloat(item.weight) || 0,
+      dimensions: item.dimensions || null,
+      variants: item.variants || item.product_variants || []
     }));
+  }
+
+  private transformDropCommerceProducts(data: any): DropshippingProduct[] {
+    const products = data.products || data.data || data.results || [];
+    return products.map((item: any) => ({
+      id: item.id?.toString() || `dropcom_${Date.now()}_${Math.random()}`,
+      title: item.title || item.name || 'Untitled Product',
+      description: item.description || item.body_html || 'No description available',
+      price: this.parsePrice(item.price || item.retail_price || '0'),
+      sku: item.sku || item.vendor_sku || `DC_${item.id}`,
+      category: this.mapDropCommerceCategory(item.product_type || item.category),
+      tags: this.extractTags(item.tags || item.categories),
+      images: this.extractDropCommerceImages(item),
+      stock_level: parseInt(item.inventory_quantity || item.stock) || 0,
+      shipping_time: this.parseShippingTime(item.shipping_time || '3-7 business days'),
+      weight: parseFloat(item.weight) || 0,
+      dimensions: item.dimensions || null,
+      variants: item.variants || item.options || []
+    }));
+  }
+
+  private generateMockProducts(data: any): DropshippingProduct[] {
+    // Generate mock products for testing when using mock_api
+    const mockCategories = ['electronics', 'fashion', 'home-kitchen', 'beauty', 'sports', 'toys'];
+    const limit = data.limit || 20;
+    const category = data.category || null;
+    
+    const products = [];
+    for (let i = 1; i <= limit; i++) {
+      const productCategory = category || mockCategories[Math.floor(Math.random() * mockCategories.length)];
+      products.push({
+        id: `mock_${i}_${Date.now()}`,
+        title: `Mock ${productCategory} Product ${i}`,
+        description: `High quality ${productCategory} product for testing purposes`,
+        price: Math.floor(Math.random() * 200) + 10,
+        sku: `MOCK_${i}_${productCategory.toUpperCase()}`,
+        category: productCategory,
+        tags: [productCategory, 'mock', 'testing'],
+        images: [
+          `https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&w=500`,
+          `https://images.pexels.com/photos/267394/pexels-photo-267394.jpeg?auto=compress&cs=tinysrgb&w=500`
+        ],
+        stock_level: Math.floor(Math.random() * 100) + 10,
+        shipping_time: '3-5 business days',
+        weight: Math.random() * 2 + 0.1,
+        dimensions: {
+          length: Math.floor(Math.random() * 20) + 5,
+          width: Math.floor(Math.random() * 15) + 5,
+          height: Math.floor(Math.random() * 10) + 2
+        },
+        variants: []
+      });
+    }
+    return products;
+  }
+
+  private mapCategoryToProvider(category: string): string | null {
+    const categoryMap: Record<string, Record<string, string>> = {
+      'printful': {
+        'electronics': 'accessories',
+        'fashion': 'clothing',
+        'home-kitchen': 'home-living',
+        'beauty': 'accessories',
+        'sports': 'clothing',
+        'toys': 'accessories'
+      },
+      'spocket': {
+        'electronics': 'Electronics',
+        'fashion': 'Fashion',
+        'home-kitchen': 'Home & Garden',
+        'beauty': 'Health & Beauty',
+        'sports': 'Sports & Recreation',
+        'toys': 'Toys & Hobbies'
+      },
+      'dropcommerce': {
+        'electronics': 'electronics',
+        'fashion': 'apparel',
+        'home-kitchen': 'home-garden',
+        'beauty': 'health-beauty',
+        'sports': 'sports-outdoors',
+        'toys': 'toys-games'
+      }
+    };
+
+    return categoryMap[this.provider]?.[category] || null;
+  }
+
+  private parsePrice(price: any): number {
+    if (typeof price === 'number') return price;
+    if (typeof price === 'string') {
+      const parsed = parseFloat(price.replace(/[^0-9.]/g, ''));
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
+  private parseShippingTime(time: any): string {
+    if (typeof time === 'string') return time;
+    if (typeof time === 'number') return `${time} business days`;
+    return '5-7 business days';
+  }
+
+  private extractTags(tags: any): string[] {
+    if (Array.isArray(tags)) return tags.map(t => String(t));
+    if (typeof tags === 'string') return tags.split(',').map(t => t.trim());
+    return [];
+  }
+
+  private extractStockFromResponse(data: any): number {
+    switch (this.provider) {
+      case 'printful':
+        return data.result?.quantity || 999; // Printful usually has unlimited stock
+      case 'spocket':
+        return data.inventory_count || data.inventory || 0;
+      case 'dropcommerce':
+        return data.inventory_quantity || data.stock || 0;
+      default:
+        return data.stock || data.quantity || 0;
+    }
+  }
+
+  private extractOrderId(data: any): string {
+    switch (this.provider) {
+      case 'printful':
+        return data.result?.id || data.id;
+      case 'spocket':
+        return data.order?.id || data.id;
+      case 'dropcommerce':
+        return data.order_id || data.id;
+      default:
+        return data.id || data.order_id || `${this.provider}_${Date.now()}`;
+    }
+  }
+
+  private extractTrackingNumber(data: any): string | undefined {
+    switch (this.provider) {
+      case 'printful':
+        return data.result?.tracking_number || data.tracking?.number;
+      case 'spocket':
+        return data.tracking_number;
+      case 'dropcommerce':
+        return data.tracking_number || data.fulfillment?.tracking_number;
+      default:
+        return data.tracking_number;
+    }
+  }
+
+  private mapPrintfulCategory(category: any): string {
+    if (!category) return 'general';
+    const categoryMap: Record<string, string> = {
+      'mens-clothing': 'fashion',
+      'womens-clothing': 'fashion',
+      'accessories': 'fashion',
+      'home-living': 'home-kitchen',
+      'bags': 'fashion',
+      'drinkware': 'home-kitchen',
+      'phone-cases': 'electronics'
+    };
+    return categoryMap[category.toLowerCase()] || 'general';
+  }
+
+  private mapSpocketCategory(category: any): string {
+    if (!category) return 'general';
+    const categoryMap: Record<string, string> = {
+      'electronics': 'electronics',
+      'fashion': 'fashion',
+      'home & garden': 'home-kitchen',
+      'health & beauty': 'beauty',
+      'sports & recreation': 'sports',
+      'toys & hobbies': 'toys'
+    };
+    return categoryMap[category.toLowerCase()] || 'general';
+  }
+
+  private mapDropCommerceCategory(category: any): string {
+    if (!category) return 'general';
+    const categoryMap: Record<string, string> = {
+      'electronics': 'electronics',
+      'apparel': 'fashion',
+      'home-garden': 'home-kitchen',
+      'health-beauty': 'beauty',
+      'sports-outdoors': 'sports',
+      'toys-games': 'toys'
+    };
+    return categoryMap[category.toLowerCase()] || 'general';
+  }
+
+  private extractPrintfulImages(item: any): string[] {
+    const images = [];
+    
+    // From files array
+    if (item.files && Array.isArray(item.files)) {
+      images.push(...item.files.map((f: any) => f.preview_url || f.thumbnail_url).filter(Boolean));
+    }
+    
+    // From sync product data
+    if (item.sync_product?.thumbnail_url) {
+      images.push(item.sync_product.thumbnail_url);
+    }
+    
+    // From variants
+    if (item.sync_variants && Array.isArray(item.sync_variants)) {
+      item.sync_variants.forEach((variant: any) => {
+        if (variant.files && Array.isArray(variant.files)) {
+          images.push(...variant.files.map((f: any) => f.preview_url).filter(Boolean));
+        }
+      });
+    }
+    
+    return [...new Set(images)]; // Remove duplicates
+  }
+
+  private extractDropCommerceImages(item: any): string[] {
+    const images = [];
+    
+    if (item.images && Array.isArray(item.images)) {
+      images.push(...item.images.map((img: any) => img.src || img.url || img).filter(Boolean));
+    }
+    
+    if (item.featured_image) {
+      images.unshift(item.featured_image);
+    }
+    
+    if (item.image && !images.includes(item.image)) {
+      images.push(item.image);
+    }
+    
+    return [...new Set(images)];
   }
 
   private transformOrderData(orderData: any): any {
@@ -194,17 +454,89 @@ class DropshippingAPI {
         return {
           recipient: {
             name: orderData.customer.name,
+            company: '',
             email: orderData.customer.email,
+            phone: orderData.shipping.phone || '',
             address1: orderData.shipping.street,
+            address2: '',
             city: orderData.shipping.city,
             state_code: orderData.shipping.state,
             country_code: orderData.shipping.country,
-            zip: orderData.shipping.zipCode,
-            phone: orderData.shipping.phone
+            zip: orderData.shipping.zipCode
           },
           items: [{
-            variant_id: orderData.productId,
-            quantity: orderData.quantity
+            sync_variant_id: parseInt(orderData.productExternalId),
+            quantity: orderData.quantity,
+            retail_price: orderData.price || null
+          }],
+          retail_costs: {
+            currency: 'USD',
+            subtotal: orderData.subtotal || null,
+            discount: orderData.discount || null,
+            shipping: orderData.shipping_cost || null,
+            tax: orderData.tax || null
+          }
+        };
+      case 'spocket':
+        return {
+          line_items: [{
+            spocket_product_id: orderData.productExternalId,
+            quantity: orderData.quantity,
+            product_variant_id: orderData.variantId || null
+          }],
+          shipping_address: {
+            first_name: orderData.customer.name.split(' ')[0],
+            last_name: orderData.customer.name.split(' ').slice(1).join(' '),
+            company: '',
+            address1: orderData.shipping.street,
+            address2: '',
+            city: orderData.shipping.city,
+            zip: orderData.shipping.zipCode,
+            province: orderData.shipping.state,
+            country: orderData.shipping.country,
+            phone: orderData.shipping.phone || ''
+          },
+          email: orderData.customer.email,
+          order_id: orderData.orderId
+        };
+      case 'dropcommerce':
+        return {
+          external_order_id: orderData.orderId,
+          line_items: [{
+            product_id: orderData.productExternalId,
+            quantity: orderData.quantity,
+            variant_id: orderData.variantId || null
+          }],
+          shipping_address: {
+            first_name: orderData.customer.name.split(' ')[0],
+            last_name: orderData.customer.name.split(' ').slice(1).join(' '),
+            address1: orderData.shipping.street,
+            address2: '',
+            city: orderData.shipping.city,
+            province: orderData.shipping.state,
+            country: orderData.shipping.country,
+            zip: orderData.shipping.zipCode,
+            phone: orderData.shipping.phone || ''
+          },
+          customer: {
+            email: orderData.customer.email,
+            first_name: orderData.customer.name.split(' ')[0],
+            last_name: orderData.customer.name.split(' ').slice(1).join(' ')
+          }
+        };
+      case 'mock_api':
+        return {
+          order_id: orderData.orderId,
+          product_id: orderData.productExternalId,
+          customer: orderData.customer,
+          shipping_address: orderData.shipping,
+          quantity: orderData.quantity
+        };
+      default:
+        return orderData;
+    }
+  }
+}
           }]
         };
       default:

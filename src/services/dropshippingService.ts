@@ -35,7 +35,7 @@ class DropshippingService {
   }
 
   async configureAPI(provider: string, apiKey: string, apiSecret?: string, settings?: Record<string, any>): Promise<DropshippingConfig> {
-    return this.makeRequest('dropshipping-import', {
+    const response = await this.makeRequest('dropshipping-import', {
       method: 'POST',
       body: JSON.stringify({
         action: 'configure_api',
@@ -45,39 +45,67 @@ class DropshippingService {
         settings
       })
     });
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to configure API');
+    }
+    
+    return response.config;
   }
 
   async importProducts(request: ImportProductsRequest): Promise<ImportProductsResponse> {
-    return this.makeRequest('dropshipping-import', {
+    const response = await this.makeRequest('dropshipping-import', {
       method: 'POST',
       body: JSON.stringify({
         action: 'import_products',
         ...request
       })
     });
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to import products');
+    }
+    
+    return response;
   }
 
   async syncInventory(): Promise<SyncInventoryResponse> {
-    return this.makeRequest('dropshipping-import', {
+    const response = await this.makeRequest('dropshipping-import', {
       method: 'POST',
       body: JSON.stringify({
         action: 'sync_inventory'
       })
     });
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to sync inventory');
+    }
+    
+    return response;
   }
 
   async getProducts(): Promise<{ products: DropshippingProduct[] }> {
-    return this.makeRequest('dropshipping-import?action=get_products');
+    const response = await this.makeRequest('dropshipping-import?action=get_products');
+    
+    return {
+      products: response.products || []
+    };
   }
 
   async fulfillOrder(request: FulfillOrderRequest): Promise<FulfillOrderResponse> {
-    return this.makeRequest('dropshipping-import', {
+    const response = await this.makeRequest('dropshipping-import', {
       method: 'POST',
       body: JSON.stringify({
         action: 'fulfill_order',
         ...request
       })
     });
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to fulfill order');
+    }
+    
+    return response;
   }
 
   async getOrderStatus(orderId: string): Promise<DropshippingOrder | null> {
@@ -87,6 +115,24 @@ class DropshippingService {
     } catch (error) {
       console.error('Failed to get order status:', error);
       return null;
+    }
+  }
+
+  async testConnection(provider: string, apiKey: string, apiSecret?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await this.makeRequest('dropshipping-import', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'test_connection',
+          provider,
+          apiKey,
+          apiSecret
+        })
+      });
+      
+      return { success: response.success, error: response.error };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   }
 }

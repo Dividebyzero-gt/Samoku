@@ -397,23 +397,38 @@ const DropshippingManager: React.FC = () => {
           </button>
         </div>
       </div>
-
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <div className="flex items-start">
-          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
-          <div>
-            <h4 className="text-sm font-medium text-yellow-900">Setup Instructions</h4>
-            <div className="text-sm text-yellow-700 mt-2 space-y-1">
-              <p><strong>For Mock API (Demo):</strong> Use any API key for testing</p>
-              <p><strong>For Printful:</strong> Get your API key from Settings → API in your Printful dashboard</p>
-              <p><strong>For DropCommerce:</strong> Request API access from your account manager</p>
-              <p><strong>Webhook URL:</strong> {`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dropshipping-webhook`}</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
+
+  const getApiKeyPlaceholder = () => {
+    switch (configForm.provider) {
+      case 'printful':
+        return 'Enter your Printful Private API Key';
+      case 'spocket':
+        return 'Enter your Spocket Access Token';
+      case 'dropcommerce':
+        return 'Enter your DropCommerce API Key';
+      case 'mock_api':
+        return 'Enter any value for testing';
+      default:
+        return 'Enter your API key';
+    }
+  };
+
+  const getApiSecretPlaceholder = () => {
+    switch (configForm.provider) {
+      case 'printful':
+        return 'Not required for Printful';
+      case 'spocket':
+        return 'Not required for Spocket';
+      case 'dropcommerce':
+        return 'Enter your DropCommerce API Secret';
+      case 'mock_api':
+        return 'Not required for testing';
+      default:
+        return 'Enter your API secret if required';
+    }
+  };
 
   const renderAnalyticsTab = () => (
     <div className="space-y-6">
@@ -486,7 +501,7 @@ const DropshippingManager: React.FC = () => {
                   <div 
                     className="bg-blue-600 h-2 rounded-full" 
                     style={{ width: `${(count / products.length) * 100}%` }}
-                  ></div>
+                  placeholder={getApiKeyPlaceholder()}
                 </div>
                 <span className="text-sm font-medium text-gray-900">{count}</span>
               </div>
@@ -507,11 +522,48 @@ const DropshippingManager: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
+                  placeholder={getApiSecretPlaceholder()}
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
+              {/* Provider-specific settings */}
+              {configForm.provider === 'printful' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h5 className="font-medium text-blue-900 mb-2">Printful Setup Instructions</h5>
+                  <ol className="text-sm text-blue-800 space-y-1">
+                    <li>1. Go to your Printful Dashboard → Settings → API</li>
+                    <li>2. Copy your Private API Key</li>
+                    <li>3. Paste it in the API Key field above</li>
+                    <li>4. Leave API Secret empty (not needed for Printful)</li>
+                  </ol>
+                </div>
+              )}
+
+              {configForm.provider === 'spocket' && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h5 className="font-medium text-green-900 mb-2">Spocket Setup Instructions</h5>
+                  <ol className="text-sm text-green-800 space-y-1">
+                    <li>1. Go to your Spocket Dashboard → Settings → API</li>
+                    <li>2. Generate an Access Token</li>
+                    <li>3. Paste it in the API Key field above</li>
+                    <li>4. Leave API Secret empty (not needed for Spocket)</li>
+                  </ol>
+                </div>
+              )}
+
+              {configForm.provider === 'dropcommerce' && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <h5 className="font-medium text-purple-900 mb-2">DropCommerce Setup Instructions</h5>
+                  <ol className="text-sm text-purple-800 space-y-1">
+                    <li>1. Contact DropCommerce support for API access</li>
+                    <li>2. Get your API Key and Secret from your account</li>
+                    <li>3. Enter both API Key and API Secret above</li>
+                    <li>4. API Secret is required for DropCommerce</li>
+                  </ol>
+                </div>
+              )}
+
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
