@@ -104,35 +104,46 @@ class AuthService {
 
   async signIn(credentials: SignInData): Promise<{ user: User | null; error: string | null }> {
     try {
-      console.log('AuthService: signIn called with email:', credentials.email);
+      console.log('AuthService: Starting signIn for:', credentials.email);
       
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
       
-      console.log('AuthService: Auth result:', { user: !!authData.user, error: authError?.message });
+      console.log('AuthService: Supabase auth response:', { 
+        hasUser: !!authData.user, 
+        hasSession: !!authData.session,
+        error: authError?.message 
+      });
 
       if (authError) {
+        console.error('AuthService: Authentication failed:', authError.message);
         return { user: null, error: authError.message };
       }
 
       if (!authData.user) {
+        console.error('AuthService: No user in auth response');
         return { user: null, error: 'Invalid credentials' };
       }
 
-      const result = this.createUserFromAuthData(authData, credentials.email);
-      return result;
+      console.log('AuthService: Creating user from auth data');
+      const user = this.createUserFromAuthData(authData, credentials.email);
+      console.log('AuthService: User created successfully:', user.email);
+      
+      return { user, error: null };
     } catch (error) {
-      console.error('AuthService: signIn exception:', error);
+      console.error('AuthService: Unexpected error during signIn:', error);
       return { user: null, error: error.message || 'Authentication failed' };
     }
   }
 
-  private createUserFromAuthData(authData: any, email: string): { user: User; error: null } {
+  private createUserFromAuthData(authData: any, email: string): User {
     // Get basic user info from auth metadata or defaults
     const userRole = authData.user.user_metadata?.role || 'customer';
     const userName = authData.user.user_metadata?.name || 'User';
+    
+    console.log('AuthService: Creating user with role:', userRole, 'name:', userName);
     
     // Create simplified user object
     const user: User = {
@@ -149,6 +160,7 @@ class AuthService {
     
     // Add store info for admin user specifically
     if (userRole === 'admin' && email === 'admin@samoku.com') {
+      console.log('AuthService: Adding admin store info');
       user.store = {
         id: '550e8400-e29b-41d4-a716-446655440000',
         userId: authData.user.id,
@@ -167,7 +179,7 @@ class AuthService {
       };
     }
 
-    return { user, error: null };
+    return user;
   }
 
   async signOut(): Promise<{ error: string | null }> {

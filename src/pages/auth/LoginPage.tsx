@@ -20,22 +20,29 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('LoginPage: Form submitted for email:', email);
+    
     setError('');
     setIsSubmitting(true);
 
     try {
+      console.log('LoginPage: Calling login function');
       const success = await login({ email, password });
+      
+      console.log('LoginPage: Login result:', success);
       
       if (success) {
         console.log('Login successful, navigating to:', from);
         navigate(from, { replace: true });
       } else {
+        console.error('LoginPage: Login returned false');
         setError('Login failed. Please check your credentials and try again.');
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('LoginPage: Exception during login:', err);
       setError('Login failed. Please try again.');
     } finally {
+      console.log('LoginPage: Setting isSubmitting to false');
       setIsSubmitting(false);
     }
   };

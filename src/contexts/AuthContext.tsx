@@ -53,28 +53,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (credentials: SignInData): Promise<boolean> => {
     try {
-      console.log('AuthContext: login called with:', credentials.email);
+      console.log('AuthContext: Starting login process for:', credentials.email);
       setLoading(true);
       
       const { user: loggedInUser, error } = await authService.signIn(credentials);
       
+      console.log('AuthContext: AuthService response:', { 
+        hasUser: !!loggedInUser, 
+        error: error 
+      });
+      
       if (error) {
-        console.error('Login error:', error);
+        console.error('AuthContext: Login failed with error:', error);
         setLoading(false);
         return false;
       }
 
       if (loggedInUser) {
-        console.log('AuthContext: Login successful for:', loggedInUser.email);
+        console.log('AuthContext: Setting user and completing login for:', loggedInUser.email);
         setUser(loggedInUser);
         setLoading(false);
         return true;
       }
       
+      console.error('AuthContext: No user returned but no error either');
       setLoading(false);
       return false;
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('AuthContext: Unexpected error during login:', error);
       setLoading(false);
       return false;
     }
