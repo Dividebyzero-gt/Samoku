@@ -392,52 +392,52 @@ const DropshippingManager: React.FC = () => {
           {configForm.provider === 'printful' && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h5 className="font-medium text-blue-900 mb-2">Printful Setup Instructions</h5>
+              <div className="mb-3 p-2 bg-yellow-100 border border-yellow-300 rounded">
+                <p className="text-xs text-yellow-800">
+                  <strong>Demo Mode:</strong> Currently using simulated data due to WebContainer API limitations. In production deployment, this will connect to real Printful API.
+                </p>
+              </div>
               <ol className="text-sm text-blue-800 space-y-1">
                 <li>1. Go to your Printful Dashboard → Settings → Stores</li>
                 <li>2. Select your store and go to API tab</li>
                 <li>3. Copy your <strong>Private Access Token</strong> (not API Key)</li>
-                <li>3. Paste it in the API Key field above</li>
-                <li>4. ⚠️ <strong>PRODUCTION MODE:</strong> This will access live products and create real orders</li>
+                <li>4. Paste it in the API Key field above</li>
+                <li>5. For testing, you can enter any value to see demo products</li>
               </ol>
-              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
-                <p className="text-xs text-red-800">
-                  <strong>Warning:</strong> Using production API keys will create real orders and charges. Test in sandbox first.
-                </p>
-              </div>
             </div>
           )}
 
           {configForm.provider === 'spocket' && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <h5 className="font-medium text-green-900 mb-2">Spocket Setup Instructions</h5>
+              <div className="mb-3 p-2 bg-yellow-100 border border-yellow-300 rounded">
+                <p className="text-xs text-yellow-800">
+                  <strong>Demo Mode:</strong> Currently using simulated data due to WebContainer API limitations. In production deployment, this will connect to real Spocket API.
+                </p>
+              </div>
               <ol className="text-sm text-green-800 space-y-1">
                 <li>1. Go to your Spocket Dashboard → Settings → Integrations</li>
                 <li>2. Generate a <strong>Production API Key</strong></li>
                 <li>3. Paste it in the API Key field above</li>
-                <li>4. ⚠️ <strong>PRODUCTION MODE:</strong> This will access live supplier products</li>
+                <li>4. For testing, you can enter any value to see demo products</li>
               </ol>
-              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
-                <p className="text-xs text-red-800">
-                  <strong>Warning:</strong> Production API will place real orders with suppliers and incur costs.
-                </p>
-              </div>
             </div>
           )}
 
           {configForm.provider === 'dropcommerce' && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
               <h5 className="font-medium text-purple-900 mb-2">DropCommerce Setup Instructions</h5>
+              <div className="mb-3 p-2 bg-yellow-100 border border-yellow-300 rounded">
+                <p className="text-xs text-yellow-800">
+                  <strong>Demo Mode:</strong> Currently using simulated data due to WebContainer API limitations. In production deployment, this will connect to real DropCommerce API.
+                </p>
+              </div>
               <ol className="text-sm text-purple-800 space-y-1">
                 <li>1. Go to your DropCommerce Dashboard → API Settings</li>
                 <li>2. Generate <strong>Production API Credentials</strong></li>
                 <li>3. Enter both API Key and API Secret above</li>
-                <li>4. ⚠️ <strong>PRODUCTION MODE:</strong> This will access live products and process real orders</li>
+                <li>4. For testing, you can enter any value to see demo products</li>
               </ol>
-              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
-                <p className="text-xs text-red-800">
-                  <strong>Warning:</strong> Production credentials will create real fulfillment orders and charges.
-                </p>
-              </div>
             </div>
           )}
 
