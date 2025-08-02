@@ -406,6 +406,7 @@ class DropshippingAPI {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'User-Agent': 'Samoku/1.0',
+      'Accept': 'application/json',
     };
 
     // Configure authentication headers based on provider
@@ -414,8 +415,8 @@ class DropshippingAPI {
         headers['Authorization'] = `Bearer ${this.apiKey}`;
         break;
       case 'spocket':
-        headers['X-Spocket-Access-Token'] = this.apiKey;
-        headers['Content-Type'] = 'application/json';
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
+        headers['X-API-KEY'] = this.apiKey;
         break;
       case 'dropcommerce':
         headers['Authorization'] = `Bearer ${this.apiKey}`;
