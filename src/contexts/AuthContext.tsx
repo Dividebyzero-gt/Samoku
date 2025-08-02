@@ -55,28 +55,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('AuthContext: login called with:', credentials.email);
       setLoading(true);
-      console.log('AuthContext: calling authService.signIn...');
-      const { user: loggedInUser, error } = await authService.signIn(credentials);
       
-      console.log('AuthContext: signIn completed with:', { user: !!loggedInUser, error });
+      const { user: loggedInUser, error } = await authService.signIn(credentials);
       
       if (error) {
         console.error('Login error:', error);
-        console.log('AuthContext: Setting loading to false due to error');
-        setLoading(false); 
+        setLoading(false);
         return false;
       }
 
       if (loggedInUser) {
-        console.log('AuthContext: Setting user and completing login');
-        console.log('AuthContext: User data:', { id: loggedInUser.id, email: loggedInUser.email, role: loggedInUser.role });
+        console.log('AuthContext: Login successful for:', loggedInUser.email);
         setUser(loggedInUser);
         setLoading(false);
-        console.log('AuthContext: Login successful, returning true');
         return true;
       }
       
-      console.log('AuthContext: No user returned from signIn');
       setLoading(false);
       return false;
     } catch (error) {

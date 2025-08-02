@@ -19,35 +19,23 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login form submitted');
-    console.log('Email:', email);
-    console.log('Password length:', password.length);
     
     setError('');
     setIsSubmitting(true);
 
     try {
-      console.log('Calling login function...');
       const success = await login({ email, password });
-      console.log('Login result:', success);
       
       if (success) {
         console.log('Login successful, navigating to:', from);
-        
-        // Add a small delay to ensure auth state is fully set
-        setTimeout(() => {
-          console.log('Navigating after successful login');
-          navigate(from, { replace: true });
-        }, 200);
+        navigate(from, { replace: true });
       } else {
-        console.log('Login failed');
         setError('Login failed. Please check your credentials and try again.');
       }
     } catch (err) {
       console.error('Login error:', err);
       setError('Login failed. Please try again.');
     } finally {
-      console.log('Login attempt completed, resetting loading state');
       setIsSubmitting(false);
     }
   };
