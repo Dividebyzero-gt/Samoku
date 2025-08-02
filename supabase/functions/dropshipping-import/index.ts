@@ -40,12 +40,6 @@ class DropshippingAPI {
 
   async getProducts(category?: string, limit: number = 50): Promise<DropshippingProduct[]> {
     try {
-      // Use mock data for real providers in demo/development environment
-      if (this.provider === 'spocket' || this.provider === 'printful' || this.provider === 'dropcommerce') {
-        console.log(`Using demo mode mock data for ${this.provider}`);
-        return this.generateProviderMockData(category, limit);
-      }
-      
       console.log(`Making real API call to ${this.provider} for category: ${category}, limit: ${limit}`);
       
       // Make real API call to provider
@@ -92,13 +86,13 @@ class DropshippingAPI {
     } catch (error) {
       console.error(`${this.provider} API error:`, error);
       
-      // Only use mock data if explicitly using mock_api provider
+      // Use mock data as fallback only for mock_api provider
       if (this.provider === 'mock_api') {
         console.log(`Using mock data for ${this.provider}`);
         return this.generateProviderMockData(category, limit);
       }
       
-      // For real providers, throw the error instead of falling back to mock data
+      // For real providers, provide detailed error information
       throw new Error(`Failed to fetch products from ${this.provider}: ${error.message}`);
     }
   }
@@ -121,7 +115,8 @@ class DropshippingAPI {
       });
       
       if (!response.ok) {
-        throw new Error(`Stock check failed: ${response.status} ${response.statusText}`);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Stock check failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
       
       const data = await response.json();
