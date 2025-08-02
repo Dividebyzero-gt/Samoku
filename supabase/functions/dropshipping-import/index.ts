@@ -123,8 +123,6 @@ class DropshippingAPI {
     // Filter out any products with 0 stock (enforce in-stock only)
     return products.filter(product => product.stock_level > 0);
   }
-    return products;
-  }
 
   private generateProductName(category: string, index: number): string {
     const productNames: Record<string, string[]> = {
@@ -855,7 +853,8 @@ Deno.serve(async (req: Request) => {
                   dimensions: product.dimensions,
                   variants: product.variants || [],
                   api_data: product,
-                  is_active: true
+                  is_active: true,
+                  last_synced: new Date().toISOString()
                 })
                 .select()
                 .single();
@@ -867,8 +866,7 @@ Deno.serve(async (req: Request) => {
 
                 // Also create a product record for the main products table
                 const { data: adminStore } = await supabase
-                   is_active: true,
-                   last_synced: new Date().toISOString()
+                  .from('stores')
                   .select('id')
                   .eq('user_id', user.id)
                   .single();
@@ -964,8 +962,8 @@ Deno.serve(async (req: Request) => {
               .from('dropshipping_products')
               .update({ 
                 stock_level: stockLevel,
-               last_synced: new Date().toISOString(),
-               is_active: stockLevel > 0
+                last_synced: new Date().toISOString(),
+                is_active: stockLevel > 0
               })
               .eq('id', product.id);
 
@@ -1160,6 +1158,61 @@ Deno.serve(async (req: Request) => {
 
         return new Response(
           JSON.stringify({ success: true }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      case 'bulk_delete': {
+        const { productIds } = requestData;
+
+        if (!Array.isArray(productIds) || productIds.length === 0) {
+          throw new Error('Product IDs array required');
+        }
+
+        let deleted = 0;
+        const errors = [];
+
+        for (const productId of productIds) {
+          try {
+            // Delete from dropshipping_products table
+            const { error: dropshippingError } = await supabase
+              .from('dropshipping_products')
+              .delete()
+              .eq('id', productId);
+
+            if (dropshippingError) {
+              errors.push({ productId, error: dropshippingError.message });
+              continue;
+            }
+
+            // Delete from main products table
+            const { error: productsError } = await supabase
+              .from('products')
+              .delete()
+              .eq('external_id', productId)
+              .eq('is_dropshipped', true);
+
+            if (productsError) {
+              console.error('Failed to delete from products table:', productsError);
+              // Don't count as error since main deletion succeeded
+            }
+
+            deleted++;
+          } catch (error) {
+            errors.push({ productId, error: error.message });
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: deleted > 0,
+            deleted,
+            total: productIds.length,
+            errors: errors.length,
+            errorDetails: errors
+          }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
