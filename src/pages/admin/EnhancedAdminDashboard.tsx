@@ -21,7 +21,8 @@ import {
   Shield,
   UserCheck,
   AlertTriangle,
-  Clock
+  Clock,
+  EyeOff
 } from 'lucide-react';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
 import RoleGuard from '../../components/auth/RoleGuard';
