@@ -142,22 +142,23 @@ class DropshippingService {
       return { success: false, error: error.message };
     }
   }
-}
 
- async bulkDeleteProducts(productIds: string[]): Promise<{ success: boolean; deleted: number; error?: string }> {
-   try {
-     const response = await this.makeRequest('dropshipping-import', {
-       method: 'POST',
-       body: JSON.stringify({
-         action: 'bulk_delete',
-         productIds
-       })
-     });
-     
-     return { success: response.success, deleted: response.deleted, error: response.error };
-   } catch (error) {
-     return { success: false, deleted: 0, error: error.message };
-   }
- }
+
+  async bulkDeleteProducts(productIds: string[]): Promise<{ success: boolean; deleted: number; error?: string }> {
+    try {
+      const response = await this.makeRequest('dropshipping-import', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'bulk_delete',
+          productIds
+        })
+      });
+      
+      return { success: response.success, deleted: response.deleted, error: response.error };
+    } catch (error) {
+      return { success: false, deleted: 0, error: error.message };
+    }
+  }
+}
 
 export const dropshippingService = new DropshippingService();
