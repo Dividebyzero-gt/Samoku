@@ -581,12 +581,11 @@ const DropshippingManager: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">All Categories</option>
-                <option value="electronics">Electronics</option>
-                <option value="fashion">Fashion</option>
-                <option value="home-kitchen">Home & Kitchen</option>
-                <option value="beauty">Beauty</option>
-                <option value="sports">Sports</option>
-                <option value="toys">Toys</option>
+                {spocketCategories.map(cat => (
+                  <option key={cat} value={cat.toLowerCase().replace(/\s+/g, '-').replace(/&/g, '')}>
+                    {cat}
+                  </option>
+                ))}
               </select>
             </div>
 
