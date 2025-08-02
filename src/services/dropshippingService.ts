@@ -1,20 +1,29 @@
 import { DropshippingProduct, DropshippingOrder, ImportProductsRequest, ImportProductsResponse, SyncInventoryResponse, FulfillOrderRequest, FulfillOrderResponse, DropshippingConfig } from '../types/dropshipping';
 import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 class DropshippingService {
   private baseUrl: string;
 
   constructor() {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase not configured. Please click "Connect to Supabase" in the top right corner to set up the database connection.');
+    }
+
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     
     if (!supabaseUrl) {
-      throw new Error('VITE_SUPABASE_URL environment variable is not set. Please configure your Supabase project URL.');
+      throw new Error('Supabase URL not found. Please click "Connect to Supabase" in the top right corner.');
     }
     
     this.baseUrl = `${supabaseUrl}/functions/v1`;
   }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
+    if (!supabase) {
+      throw new Error('Supabase not configured. Please click "Connect to Supabase" in the top right corner.');
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.access_token) {
