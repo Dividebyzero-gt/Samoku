@@ -68,8 +68,6 @@ class ProductService {
       // Default to only active products and only show approved stores (except admin store)
       if (filters.isActive === undefined && !filters.ownerId) {
         query = query.eq('is_active', true);
-        // Only show products from approved stores OR admin store (dropshipped products)
-        query = query.or('stores.is_approved.eq.true,is_dropshipped.eq.true');
       }
 
       // Apply sorting
