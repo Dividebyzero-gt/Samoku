@@ -18,6 +18,14 @@ import ProfilePage from './pages/ProfilePage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import EnhancedAdminDashboard from './pages/admin/EnhancedAdminDashboard';
 import EnhancedVendorDashboard from './pages/vendor/EnhancedVendorDashboard';
+import About from './pages/About';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import ContactUs from './pages/ContactUs';
+import HelpCenter from './pages/HelpCenter';
+import ShippingInfo from './pages/ShippingInfo';
+import Returns from './pages/Returns';
+import VendorCenter from './pages/VendorCenter';
 
 function App() {
   return (
@@ -55,6 +63,14 @@ function App() {
                     <EnhancedAdminDashboard />
                   </ProtectedRoute>
                 } />
+                <Route path="/about" element={<About />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
+                <Route path="/contact" element={<ContactUs />} />
+                <Route path="/help" element={<HelpCenter />} />
+                <Route path="/shipping" element={<ShippingInfo />} />
+                <Route path="/returns" element={<Returns />} />
+                <Route path="/vendor-center" element={<VendorCenter />} />
               </Routes>
             </main>
             <Footer />
