@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Store, DollarSign, TrendingUp, Users, Package, Support, BarChart3, Shield, Globe, Award } from 'lucide-react';
+import { Store, DollarSign, TrendingUp, Users, Package, Import as Support, BarChart3, Shield, Globe, Award } from 'lucide-react';
 
 const VendorCenter: React.FC = () => {
   return (
