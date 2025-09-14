@@ -28,6 +28,8 @@ import ShippingInfo from './pages/ShippingInfo';
 import Returns from './pages/Returns';
 import VendorCenter from './pages/VendorCenter';
 import WishlistPage from './pages/WishlistPage';
+import MessagingPage from './pages/vendor/MessagingPage';
+import VendorApplicationPage from './pages/vendor/VendorApplicationPage';
 
 function App() {
   return (
@@ -64,6 +66,16 @@ function App() {
                   <Route path="/vendor/*" element={
                     <ProtectedRoute requiredRole="vendor">
                       <EnhancedVendorDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/vendor/messages" element={
+                    <ProtectedRoute requiredRole="vendor">
+                      <MessagingPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/vendor/apply" element={
+                    <ProtectedRoute>
+                      <VendorApplicationPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/admin/*" element={

@@ -24,6 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
 import RoleGuard from '../../components/auth/RoleGuard';
 import DropshippingManager from '../../components/admin/DropshippingManager';
+import SupportTicketManager from '../../components/admin/SupportTicketManager';
 import { productService } from '../../services/productService';
 import { storeService } from '../../services/storeService';
 import { orderService } from '../../services/orderService';
@@ -206,6 +207,7 @@ const EnhancedAdminDashboard: React.FC = () => {
     { id: 'products', label: 'Products', icon: Package },
     { id: 'orders', label: 'Orders', icon: ShoppingBag },
     { id: 'dropshipping', label: 'Dropshipping', icon: Download },
+    { id: 'support', label: 'Support Tickets', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'settings', label: 'Platform Settings', icon: Settings },
   ];
@@ -758,6 +760,16 @@ const EnhancedAdminDashboard: React.FC = () => {
     </div>
   );
 
+  const renderSupport = () => (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Support Tickets</h2>
+        <p className="text-gray-600">Manage customer support requests</p>
+      </div>
+      <SupportTicketManager />
+    </div>
+  );
+
   const renderSettings = () => (
     <div className="space-y-6">
       <div>
@@ -835,6 +847,8 @@ const EnhancedAdminDashboard: React.FC = () => {
         return renderOrders();
       case 'dropshipping':
         return renderDropshipping();
+      case 'support':
+        return renderSupport();
       case 'analytics':
         return renderAnalytics();
       case 'settings':
