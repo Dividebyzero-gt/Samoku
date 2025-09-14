@@ -133,35 +133,6 @@ const LoginPage: React.FC = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Demo Admin Credentials Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">Demo Admin Access</h4>
-              <p className="text-sm text-blue-700 mb-2">Use these credentials to access the admin dashboard:</p>
-              <div className="text-sm text-blue-800 font-mono">
-                <p>Email: admin@samoku.com</p>
-                <p>Password: Admin123!</p>
-              </div>
-              <div className="mt-2 space-x-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('admin@samoku.com');
-                    setPassword('Admin123!');
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-700 underline"
-                >
-                  Fill in admin credentials
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSetupAdmin}
-                  disabled={isSettingUpAdmin}
-                  className="text-sm text-green-600 hover:text-green-700 underline disabled:opacity-50"
-                >
-                  {isSettingUpAdmin ? 'Creating admin...' : 'Create admin user'}
-                </button>
-              </div>
-            </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
