@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { WishlistProvider } from './contexts/WishlistContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
@@ -26,55 +27,63 @@ import HelpCenter from './pages/HelpCenter';
 import ShippingInfo from './pages/ShippingInfo';
 import Returns from './pages/Returns';
 import VendorCenter from './pages/VendorCenter';
+import WishlistPage from './pages/WishlistPage';
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <CartProvider>
-          <div className="min-h-screen bg-gray-50 flex flex-col">
-            <Header />
-            <main className="flex-1">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/products" element={<ProductsPage />} />
-                <Route path="/products/:id" element={<ProductDetailPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/checkout" element={<CheckoutPage />} />
-                <Route path="/orders" element={
-                  <ProtectedRoute>
-                    <OrdersPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/vendor/*" element={
-                  <ProtectedRoute requiredRole="vendor">
-                    <EnhancedVendorDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/*" element={
-                  <ProtectedRoute requiredRole="admin">
-                    <EnhancedAdminDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/about" element={<About />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms-of-service" element={<TermsOfService />} />
-                <Route path="/contact" element={<ContactUs />} />
-                <Route path="/help" element={<HelpCenter />} />
-                <Route path="/shipping" element={<ShippingInfo />} />
-                <Route path="/returns" element={<Returns />} />
-                <Route path="/vendor-center" element={<VendorCenter />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
+          <WishlistProvider>
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+              <Header />
+              <main className="flex-1">
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/products" element={<ProductsPage />} />
+                  <Route path="/products/:id" element={<ProductDetailPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/cart" element={<CartPage />} />
+                  <Route path="/checkout" element={<CheckoutPage />} />
+                  <Route path="/wishlist" element={
+                    <ProtectedRoute>
+                      <WishlistPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/orders" element={
+                    <ProtectedRoute>
+                      <OrdersPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/profile" element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/vendor/*" element={
+                    <ProtectedRoute requiredRole="vendor">
+                      <EnhancedVendorDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/*" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <EnhancedAdminDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/terms-of-service" element={<TermsOfService />} />
+                  <Route path="/contact" element={<ContactUs />} />
+                  <Route path="/help" element={<HelpCenter />} />
+                  <Route path="/shipping" element={<ShippingInfo />} />
+                  <Route path="/returns" element={<Returns />} />
+                  <Route path="/vendor-center" element={<VendorCenter />} />
+                </Routes>
+              </main>
+              <Footer />
+            </div>
+          </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </Router>

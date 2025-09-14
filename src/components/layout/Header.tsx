@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, Store, Settings } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, Store, Settings, Heart } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
+import { useWishlist } from '../../contexts/WishlistContext';
 
 const categories = [
   { name: 'Electronics', slug: 'electronics' },
@@ -19,6 +20,7 @@ const Header: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
+  const { totalItems: wishlistItems } = useWishlist();
   const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -73,6 +75,19 @@ const Header: React.FC = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
+            {/* Wishlist */}
+            <Link
+              to="/wishlist"
+              className="relative p-2 text-gray-600 hover:text-red-600 transition-colors"
+            >
+              <Heart className="h-6 w-6" />
+              {wishlistItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {wishlistItems > 99 ? '99+' : wishlistItems}
+                </span>
+              )}
+            </Link>
+
             {/* Cart */}
             <Link
               to="/cart"
@@ -113,6 +128,13 @@ const Header: React.FC = () => {
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         Orders
+                      </Link>
+                      <Link
+                        to="/wishlist"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Wishlist
                       </Link>
                       {user.role === 'vendor' && (
                         <Link
