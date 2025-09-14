@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { Order, OrderItem } from '../types';
+import { multiVendorOrderService } from './multiVendorOrderService';
+import { notificationService } from './notificationService';
 
 export interface CreateOrderData {
   customerId: string;
@@ -20,69 +22,30 @@ export interface CreateOrderData {
 class OrderService {
   async createOrder(orderData: CreateOrderData): Promise<Order> {
     try {
-      // Generate order number
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          order_number: orderNumber,
-          customer_id: orderData.customerId,
-          subtotal: orderData.subtotal,
-          tax_amount: orderData.taxAmount,
-          shipping_amount: orderData.shippingAmount,
-          total_amount: orderData.totalAmount,
-          shipping_address: orderData.shippingAddress,
-          billing_address: orderData.billingAddress,
-          payment_method: orderData.paymentMethod,
-          status: 'pending',
-          payment_status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (orderError) {
-        throw orderError;
-      }
-
-      // Create order items
-      const orderItems = [];
-      for (const item of orderData.items) {
-        const { data: product } = await supabase
-          .from('products')
-          .select('name, images, store_id, is_dropshipped, owner_id')
-          .eq('id', item.productId)
-          .single();
-
-        if (product) {
-          const { data: orderItem, error: itemError } = await supabase
-            .from('order_items')
-            .insert({
-              order_id: order.id,
-              product_id: item.productId,
-              store_id: product.store_id,
-              product_name: product.name,
-              product_image: product.images?.[0],
-              price: item.price,
-              quantity: item.quantity,
-              is_dropshipped: product.is_dropshipped,
-              fulfillment_status: 'pending',
-            })
-            .select()
+      // Use multi-vendor order service for proper vendor splitting
+      const enhancedOrderData = {
+        customerId: orderData.customerId,
+        items: await Promise.all(orderData.items.map(async (item) => {
+          const { data: product } = await supabase
+            .from('products')
+            .select('store_id')
+            .eq('id', item.productId)
             .single();
-
-          if (itemError) {
-            throw itemError;
-          }
-
-          orderItems.push(this.mapOrderItem(orderItem));
-        }
-      }
-
-      return {
-        ...this.mapOrder(order),
-        items: orderItems,
+          
+          return {
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            storeId: product?.store_id || ''
+          };
+        })),
+        shippingAddress: orderData.shippingAddress,
+        billingAddress: orderData.billingAddress,
+        paymentMethod: orderData.paymentMethod,
+        totalAmount: orderData.totalAmount
       };
+
+      return await multiVendorOrderService.createMultiVendorOrder(enhancedOrderData);
     } catch (error) {
       console.error('Failed to create order:', error);
       throw error;

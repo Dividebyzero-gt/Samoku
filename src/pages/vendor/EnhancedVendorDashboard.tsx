@@ -16,55 +16,55 @@ import {
   BarChart3,
   Clock,
   CheckCircle,
-  Truck
+  Truck,
+  AlertTriangle,
+  Bell
 } from 'lucide-react';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
 import RoleGuard from '../../components/auth/RoleGuard';
+import InventoryManager from '../../components/vendor/InventoryManager';
+import CommissionDashboard from '../../components/vendor/CommissionDashboard';
+import { vendorAnalyticsService } from '../../services/vendorAnalyticsService';
+import { inventoryService } from '../../services/inventoryService';
+import { VendorStats } from '../../types/enhanced';
 
 const EnhancedVendorDashboard: React.FC = () => {
   const { user, isApprovedVendor, canManageOwnProducts } = useRoleAccess();
   const [activeTab, setActiveTab] = useState('overview');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [vendorStats, setVendorStats] = useState<VendorStats | null>(null);
+  const [inventoryAlerts, setInventoryAlerts] = useState<any[]>([]);
 
-  // Mock vendor data - replace with real API calls
-  const [vendorStats, setVendorStats] = useState({
-    totalSales: 18450,
-    monthlyOrders: 67,
-    totalProducts: 23,
-    pendingOrders: 8,
-    averageRating: 4.7,
-    totalCustomers: 156,
-    unpaidCommissions: 1240,
-    thisMonthEarnings: 2850
-  });
-
-  const [vendorProducts, setVendorProducts] = useState([
-    {
-      id: '1',
-      name: 'Premium Bluetooth Speaker',
-      price: 89.99,
-      stock: 45,
-      sales: 123,
-      rating: 4.6,
-      status: 'active',
-      image: 'https://images.pexels.com/photos/3394650/pexels-photo-3394650.jpeg?auto=compress&cs=tinysrgb&w=500'
-    },
-    {
-      id: '2', 
-      name: 'Wireless Charging Pad',
-      price: 24.99,
-      stock: 78,
-      sales: 89,
-      rating: 4.4,
-      status: 'active',
-      image: 'https://images.pexels.com/photos/4219654/pexels-photo-4219654.jpeg?auto=compress&cs=tinysrgb&w=500'
+  useEffect(() => {
+    if (user?.store?.id) {
+      loadVendorData();
     }
-  ]);
+  }, [user]);
+
+  const loadVendorData = async () => {
+    if (!user?.store?.id) return;
+
+    try {
+      setLoading(true);
+      const [stats, alerts] = await Promise.all([
+        vendorAnalyticsService.getVendorStats(user.store.id),
+        inventoryService.getStoreAlerts(user.store.id, false)
+      ]);
+
+      setVendorStats(stats);
+      setInventoryAlerts(alerts);
+    } catch (error) {
+      console.error('Failed to load vendor data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'products', label: 'My Products', icon: Package },
     { id: 'orders', label: 'Orders', icon: ShoppingBag },
+    { id: 'inventory', label: 'Inventory', icon: AlertTriangle },
     { id: 'payouts', label: 'Payouts', icon: CreditCard },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'messages', label: 'Messages', icon: MessageSquare },
@@ -84,29 +84,43 @@ const EnhancedVendorDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Sales</p>
-              <p className="text-2xl font-bold text-gray-900">${vendorStats.totalSales.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                ${vendorStats?.totalSales.toLocaleString() || '0'}
+              </p>
             </div>
             <DollarSign className="h-8 w-8 text-green-600" />
           </div>
-          <p className="text-sm text-green-600 mt-2">+18% this month</p>
+          <p className="text-sm text-green-600 mt-2">
+            {vendorStats && vendorStats.lastMonthSales > 0 ? (
+              `${((vendorStats.thisMonthSales - vendorStats.lastMonthSales) / vendorStats.lastMonthSales * 100).toFixed(1)}% vs last month`
+            ) : (
+              'Start of your journey'
+            )}
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Orders</p>
-              <p className="text-2xl font-bold text-gray-900">{vendorStats.monthlyOrders}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {vendorStats?.totalOrders || 0}
+              </p>
             </div>
             <ShoppingBag className="h-8 w-8 text-blue-600" />
           </div>
-          <p className="text-sm text-orange-600 mt-2">{vendorStats.pendingOrders} pending</p>
+          <p className="text-sm text-orange-600 mt-2">
+            {vendorStats?.pendingOrders || 0} pending
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Products</p>
-              <p className="text-2xl font-bold text-gray-900">{vendorStats.totalProducts}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {vendorStats?.totalProducts || 0}
+              </p>
             </div>
             <Package className="h-8 w-8 text-purple-600" />
           </div>
@@ -117,11 +131,15 @@ const EnhancedVendorDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Store Rating</p>
-              <p className="text-2xl font-bold text-gray-900">{vendorStats.averageRating}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {vendorStats?.averageRating?.toFixed(1) || '0.0'}
+              </p>
             </div>
             <Star className="h-8 w-8 text-yellow-600" />
           </div>
-          <p className="text-sm text-gray-600 mt-2">From {vendorStats.totalCustomers} customers</p>
+          <p className="text-sm text-gray-600 mt-2">
+            From {vendorStats?.totalReviews || 0} reviews
+          </p>
         </div>
       </div>
 
@@ -132,11 +150,15 @@ const EnhancedVendorDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">This Month</span>
-              <span className="font-semibold text-green-600">${vendorStats.thisMonthEarnings.toLocaleString()}</span>
+              <span className="font-semibold text-green-600">
+                ${vendorStats?.thisMonthSales.toLocaleString() || '0'}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Pending Payout</span>
-              <span className="font-semibold text-orange-600">${vendorStats.unpaidCommissions.toLocaleString()}</span>
+              <span className="font-semibold text-orange-600">
+                ${vendorStats?.unpaidCommissions.toLocaleString() || '0'}
+              </span>
             </div>
             <div className="flex justify-between items-center pt-3 border-t">
               <span className="text-gray-600">Commission Rate</span>
@@ -150,30 +172,35 @@ const EnhancedVendorDashboard: React.FC = () => {
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Orders</h3>
-          <div className="space-y-3">
-            {[
-              { id: 'ORD-001', customer: 'John D.', amount: 89.99, status: 'pending', time: '2 hours ago' },
-              { id: 'ORD-002', customer: 'Sarah M.', amount: 24.99, status: 'shipped', time: '1 day ago' },
-              { id: 'ORD-003', customer: 'Mike R.', amount: 149.99, status: 'delivered', time: '2 days ago' }
-            ].map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">{order.id}</p>
-                  <p className="text-sm text-gray-600">{order.customer} • {order.time}</p>
+          {!vendorStats?.recentOrders || vendorStats.recentOrders.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p>No orders yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {vendorStats.recentOrders.slice(0, 3).map((order) => (
+                <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900">{order.orderNumber}</p>
+                    <p className="text-sm text-gray-600">
+                      {order.shippingAddress.fullName} • {new Date(order.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900">${order.totalAmount.toFixed(2)}</p>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {order.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900">${order.amount}</p>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {order.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -185,6 +212,16 @@ const EnhancedVendorDashboard: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">My Products</h2>
           <p className="text-gray-600">Manage your product catalog</p>
+          {inventoryAlerts.length > 0 && (
+            <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+                <span className="text-sm font-medium text-orange-900">
+                  {inventoryAlerts.length} inventory alert{inventoryAlerts.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
         {canManageOwnProducts && (
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
@@ -203,65 +240,139 @@ const EnhancedVendorDashboard: React.FC = () => {
           </p>
         </div>
       ) : (
+        vendorStats?.topSellingProducts && vendorStats.topSellingProducts.length > 0 ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {vendorStats.topSellingProducts.slice(0, 5).map((product) => (
+                    <tr key={product.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <img
+                            className="h-12 w-12 rounded-lg object-cover"
+                            src={product.images[0]}
+                            alt={product.name}
+                          />
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900 max-w-48 truncate">
+                              {product.name}
+                            </div>
+                            <div className="text-sm text-gray-500">{product.category}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${product.price.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {product.stockQuantity}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {product.salesCount}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                          <span className="ml-1 text-sm text-gray-900">{product.rating.toFixed(1)}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button className="text-blue-600 hover:text-blue-900">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button className="text-gray-600 hover:text-gray-900">
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-gray-50 rounded-lg">
+            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No products yet</h3>
+            <p className="text-gray-600 mb-4">Start by adding your first product to begin selling</p>
+            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              Add Your First Product
+            </button>
+          </div>
+        )
+      )}
+    </div>
+  );
+
+  const renderOrders = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Order Management</h2>
+        <p className="text-gray-600">Track and fulfill your customer orders</p>
+      </div>
+
+      {!vendorStats?.recentOrders || vendorStats.recentOrders.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No orders yet</h3>
+          <p className="text-gray-600">Orders from customers will appear here</p>
+        </div>
+      ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {vendorProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50">
+                {vendorStats.recentOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <img
-                          className="h-12 w-12 rounded-lg object-cover"
-                          src={product.image}
-                          alt={product.name}
-                        />
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                        </div>
-                      </div>
+                      <div className="text-sm font-medium text-gray-900">{order.orderNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.shippingAddress.fullName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ${product.price}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {product.stock}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {product.sales}
+                      ${order.totalAmount.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                        <span className="ml-1 text-sm text-gray-900">{product.rating}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Active
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {order.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(order.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex space-x-2">
                         <button className="text-blue-600 hover:text-blue-900">
                           <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="text-gray-600 hover:text-gray-900">
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button className="text-red-600 hover:text-red-900">
-                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
@@ -275,130 +386,35 @@ const EnhancedVendorDashboard: React.FC = () => {
     </div>
   );
 
-  const renderOrders = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Order Management</h2>
-        <p className="text-gray-600">Track and fulfill your customer orders</p>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {[
-                { id: 'ORD-001', customer: 'John Doe', items: 2, total: 134.98, status: 'pending', date: '2025-01-28' },
-                { id: 'ORD-002', customer: 'Sarah Smith', items: 1, total: 89.99, status: 'processing', date: '2025-01-27' },
-                { id: 'ORD-003', customer: 'Mike Johnson', items: 3, total: 199.97, status: 'shipped', date: '2025-01-26' }
-              ].map((order, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{order.id}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.customer}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.items} items
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${order.total}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                      order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      {order.status === 'pending' && (
-                        <button className="text-green-600 hover:text-green-900" title="Mark as Processing">
-                          <CheckCircle className="h-4 w-4" />
-                        </button>
-                      )}
-                      {order.status === 'processing' && (
-                        <button className="text-purple-600 hover:text-purple-900" title="Mark as Shipped">
-                          <Truck className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderPayouts = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Payouts & Earnings</h2>
-        <p className="text-gray-600">Track your earnings and payout history</p>
+    user?.store?.id ? <CommissionDashboard storeId={user.store.id} /> : (
+      <div className="text-center py-12 bg-gray-50 rounded-lg">
+        <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Store Required</h3>
+        <p className="text-gray-600">You need an approved store to view commission information</p>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">Available Balance</h3>
-          <p className="text-3xl font-bold text-green-600">${vendorStats.unpaidCommissions.toLocaleString()}</p>
-          <button className="mt-3 w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
-            Request Payout
-          </button>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">This Month</h3>
-          <p className="text-3xl font-bold text-gray-900">${vendorStats.thisMonthEarnings.toLocaleString()}</p>
-          <p className="text-sm text-gray-500 mt-1">+25% vs last month</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">Total Lifetime</h3>
-          <p className="text-3xl font-bold text-gray-900">${vendorStats.totalSales.toLocaleString()}</p>
-          <p className="text-sm text-gray-500 mt-1">Since joining</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Payout History</h3>
-        </div>
-        <div className="p-6">
-          <div className="text-center py-8">
-            <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h4 className="text-lg font-medium text-gray-900 mb-2">No payouts yet</h4>
-            <p className="text-gray-600">Your payout history will appear here once processed</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    )
   );
 
+  const renderInventory = () => (
+    user?.store?.id ? <InventoryManager storeId={user.store.id} /> : (
+      <div className="text-center py-12 bg-gray-50 rounded-lg">
+        <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Store Required</h3>
+        <p className="text-gray-600">You need an approved store to manage inventory</p>
+      </div>
+    )
+  );
   const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Loading dashboard...</p>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'overview':
         return renderOverview();
@@ -406,6 +422,8 @@ const EnhancedVendorDashboard: React.FC = () => {
         return renderProducts();
       case 'orders':
         return renderOrders();
+      case 'inventory':
+        return renderInventory();
       case 'payouts':
         return renderPayouts();
       case 'analytics':

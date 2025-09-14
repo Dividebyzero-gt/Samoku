@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, Store, Settings, Heart } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, Store, Settings, Heart, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
+import NotificationCenter from '../notifications/NotificationCenter';
+import { notificationService } from '../../services/notificationService';
 
 const categories = [
   { name: 'Electronics', slug: 'electronics' },
@@ -17,12 +19,29 @@ const categories = [
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
   const { totalItems: wishlistItems } = useWishlist();
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    if (user) {
+      loadUnreadCount();
+    }
+  }, [user]);
+
+  const loadUnreadCount = async () => {
+    if (!user) return;
+    try {
+      const count = await notificationService.getUnreadCount(user.id);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Failed to load unread count:', error);
+    }
+  };
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -75,6 +94,21 @@ const Header: React.FC = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
+            {/* Notifications */}
+            {user && (
+              <button
+                onClick={() => setIsNotificationOpen(true)}
+                className="relative p-2 text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                <Bell className="h-6 w-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* Wishlist */}
             <Link
               to="/wishlist"
@@ -247,6 +281,12 @@ const Header: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Notification Center */}
+      <NotificationCenter 
+        isOpen={isNotificationOpen} 
+        onClose={() => setIsNotificationOpen(false)} 
+      />
     </header>
   );
 };
