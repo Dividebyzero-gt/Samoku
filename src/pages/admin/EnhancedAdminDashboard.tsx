@@ -14,6 +14,7 @@ import {
   Star,
   CheckCircle,
   XCircle,
+  X,
   BarChart3,
   User,
   LogOut,
