@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bell, X, Check, Eye, Clock, Package, Store, CreditCard, AlertCircle } from 'lucide-react';
 import { notificationService, Notification } from '../../services/notificationService';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 interface NotificationCenterProps {
   isOpen: boolean;
