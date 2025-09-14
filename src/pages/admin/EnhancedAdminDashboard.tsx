@@ -931,7 +931,7 @@ const EnhancedAdminDashboard: React.FC = () => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-700">Error Rate</span>
-              <span className="text-green-600 font-medium">< 0.1%</span>
+              <span className="text-green-600 font-medium">{"< 0.1%"}</span>
             </div>
           </div>
         </div>
