@@ -140,56 +140,6 @@ const About: React.FC = () => {
         </div>
       </section>
 
-      {/* Team Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Meet Our Leadership Team
-            </h2>
-            <p className="text-xl text-gray-600">
-              Experienced leaders driving innovation in e-commerce
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                name: 'Sarah Johnson',
-                role: 'Chief Executive Officer',
-                bio: 'Former VP at Amazon with 15+ years in e-commerce and marketplace development.',
-                image: 'https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=400'
-              },
-              {
-                name: 'Michael Chen',
-                role: 'Chief Technology Officer',
-                bio: 'Ex-Google engineer specializing in scalable platforms and machine learning.',
-                image: 'https://images.pexels.com/photos/3760263/pexels-photo-3760263.jpeg?auto=compress&cs=tinysrgb&w=400'
-              },
-              {
-                name: 'Emily Rodriguez',
-                role: 'Chief Operating Officer',
-                bio: 'Operations expert from Shopify with expertise in vendor relations and logistics.',
-                image: 'https://images.pexels.com/photos/3785077/pexels-photo-3785077.jpeg?auto=compress&cs=tinysrgb&w=400'
-              }
-            ].map((member) => (
-              <div key={member.name} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-                <img
-                  src={member.image}
-                  alt={member.name}
-                  className="w-full h-64 object-cover"
-                />
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">{member.name}</h3>
-                  <p className="text-blue-600 font-semibold mb-3">{member.role}</p>
-                  <p className="text-gray-600 text-sm leading-relaxed">{member.bio}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Growth Timeline */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
