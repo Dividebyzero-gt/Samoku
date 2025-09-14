@@ -573,38 +573,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Newsletter Signup */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Stay in the Loop
-            </h2>
-            <p className="text-xl text-blue-100 mb-8">
-              Get exclusive deals, new product alerts, and insider shopping tips
-            </p>
-            
-            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-6 py-3 rounded-lg border-0 focus:ring-4 focus:ring-white/20 text-gray-900"
-              />
-              <button
-                type="submit"
-                className="bg-yellow-400 text-gray-900 px-8 py-3 rounded-lg font-semibold hover:bg-yellow-300 transition-colors"
-              >
-                Subscribe
-              </button>
-            </form>
-            
-            <p className="text-sm text-blue-200 mt-4">
-              Join 500,000+ subscribers. Unsubscribe anytime.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Mobile CTA */}
       <section className="py-16 bg-white sm:hidden">
         <div className="px-4 text-center">
