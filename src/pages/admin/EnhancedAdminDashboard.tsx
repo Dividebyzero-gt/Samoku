@@ -923,7 +923,7 @@ const EnhancedAdminDashboard: React.FC = () => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-700">API Response Time</span>
-              <span className="text-green-600 font-medium">< 200ms</span>
+              <span className="text-green-600 font-medium">{"< 200ms"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-700">Uptime</span>
