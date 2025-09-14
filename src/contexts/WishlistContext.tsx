@@ -112,3 +112,5 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     </WishlistContext.Provider>
   );
 };
+
+export { WishlistContext }
