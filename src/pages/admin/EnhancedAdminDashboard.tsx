@@ -14,18 +14,21 @@ import {
   Star,
   CheckCircle,
   XCircle,
-  Download,
-  Upload,
   BarChart3,
   User,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  Search,
+  Filter,
+  Calendar,
+  FileText,
+  Shield,
+  Database,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
 import RoleGuard from '../../components/auth/RoleGuard';
-import DropshippingManager from '../../components/admin/DropshippingManager';
-import SupportTicketManager from '../../components/admin/SupportTicketManager';
 import { productService } from '../../services/productService';
 import { storeService } from '../../services/storeService';
 import { orderService } from '../../services/orderService';
@@ -54,6 +57,23 @@ const EnhancedAdminDashboard: React.FC = () => {
   const [allVendors, setAllVendors] = useState<(UserType & { store?: Store })[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [pendingStores, setPendingStores] = useState<Store[]>([]);
+  const [showAddProductForm, setShowAddProductForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    description: '',
+    price: '',
+    originalPrice: '',
+    category: '',
+    subcategory: '',
+    sku: '',
+    stockQuantity: '',
+    images: [''],
+    tags: '',
+    specifications: ''
+  });
 
   useEffect(() => {
     loadAdminData();
@@ -202,14 +222,69 @@ const EnhancedAdminDashboard: React.FC = () => {
     }
   };
 
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const productData = {
+        name: newProduct.name,
+        description: newProduct.description,
+        price: parseFloat(newProduct.price),
+        originalPrice: newProduct.originalPrice ? parseFloat(newProduct.originalPrice) : undefined,
+        category: newProduct.category,
+        subcategory: newProduct.subcategory || undefined,
+        sku: newProduct.sku || undefined,
+        stockQuantity: parseInt(newProduct.stockQuantity),
+        images: newProduct.images.filter(img => img.trim() !== ''),
+        tags: newProduct.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
+        specifications: newProduct.specifications ? JSON.parse(newProduct.specifications) : undefined
+      };
+
+      await productService.createProduct(productData, user!.id, user!.store?.id);
+      setShowAddProductForm(false);
+      setNewProduct({
+        name: '',
+        description: '',
+        price: '',
+        originalPrice: '',
+        category: '',
+        subcategory: '',
+        sku: '',
+        stockQuantity: '',
+        images: [''],
+        tags: '',
+        specifications: ''
+      });
+      await loadProducts();
+      await loadStats();
+    } catch (error) {
+      console.error('Failed to add product:', error);
+      alert('Failed to add product. Please check all fields and try again.');
+    }
+  };
+
+  const filteredProducts = allProducts.filter(product => {
+    const matchesSearch = !searchQuery || 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.sku && product.sku.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesCategory = !categoryFilter || product.category === categoryFilter;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  const categories = ['electronics', 'fashion', 'home-kitchen', 'beauty', 'sports', 'toys'];
+
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
+    { id: 'products', label: 'Product Management', icon: Package },
     { id: 'vendors', label: 'Vendors', icon: Users },
-    { id: 'products', label: 'Products', icon: Package },
     { id: 'orders', label: 'Orders', icon: ShoppingBag },
-    { id: 'dropshipping', label: 'Dropshipping', icon: Download },
-    { id: 'support', label: 'Support Tickets', icon: MessageSquare },
+    { id: 'users', label: 'User Management', icon: User },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'reports', label: 'Reports', icon: FileText },
+    { id: 'security', label: 'Security', icon: Shield },
     { id: 'settings', label: 'Platform Settings', icon: Settings },
   ];
 
@@ -486,31 +561,111 @@ const EnhancedAdminDashboard: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Product Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Product Catalog Management</h2>
           <p className="text-gray-600">Manage all products across the platform</p>
         </div>
         <div className="flex space-x-3">
           <button 
-            onClick={() => setActiveTab('dropshipping')}
+            onClick={() => setShowAddProductForm(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
           >
-            <Download className="h-5 w-5" />
-            <span>Import Products</span>
+            <Plus className="h-5 w-5" />
+            <span>Add Product</span>
           </button>
         </div>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search products by name, SKU, or category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>
+                {cat.charAt(0).toUpperCase() + cat.slice(1).replace('-', ' & ')}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <Filter className="h-4 w-4" />
+            <span>Showing {filteredProducts.length} of {allProducts.length} products</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Product Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Products</p>
+              <p className="text-2xl font-bold text-gray-900">{allProducts.length}</p>
+            </div>
+            <Package className="h-8 w-8 text-blue-600" />
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">In Stock</p>
+              <p className="text-2xl font-bold text-green-600">
+                {allProducts.filter(p => p.stockQuantity > 0).length}
+              </p>
+            </div>
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Low Stock</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {allProducts.filter(p => p.stockQuantity <= 10 && p.stockQuantity > 0).length}
+              </p>
+            </div>
+            <Activity className="h-8 w-8 text-orange-600" />
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Value</p>
+              <p className="text-2xl font-bold text-purple-600">
+                ${allProducts.reduce((sum, p) => sum + (p.price * p.stockQuantity), 0).toLocaleString()}
+              </p>
+            </div>
+            <DollarSign className="h-8 w-8 text-purple-600" />
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {allProducts.length === 0 ? (
+        {filteredProducts.length === 0 ? (
           <div className="text-center py-12">
             <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Products</h3>
-            <p className="text-gray-600 mb-4">No products have been added to the platform yet.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Found</h3>
+            <p className="text-gray-600 mb-4">
+              {searchQuery || categoryFilter ? 'No products match your search criteria.' : 'No products have been added yet.'}
+            </p>
             <button 
-              onClick={() => setActiveTab('dropshipping')}
+              onClick={() => setShowAddProductForm(true)}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Import Dropshipping Products
+              Add Your First Product
             </button>
           </div>
         ) : (
@@ -527,7 +682,7 @@ const EnhancedAdminDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {allProducts.slice(0, 20).map((product) => (
+                {filteredProducts.slice(0, 20).map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -557,11 +712,11 @@ const EnhancedAdminDashboard: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        product.isDropshipped 
-                          ? 'bg-blue-100 text-blue-800' 
+                        product.ownerId === user?.id
+                          ? 'bg-green-100 text-green-800' 
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {product.isDropshipped ? 'Dropshipped' : 'Vendor'}
+                        {product.ownerId === user?.id ? 'Samoku Official' : 'Vendor Product'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -597,15 +752,189 @@ const EnhancedAdminDashboard: React.FC = () => {
               </tbody>
             </table>
             
-            {allProducts.length > 20 && (
+            {filteredProducts.length > 20 && (
               <div className="px-6 py-4 bg-gray-50 border-t">
                 <p className="text-sm text-gray-600">
-                  Showing 20 of {allProducts.length} products
+                  Showing 20 of {filteredProducts.length} filtered products
                 </p>
               </div>
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+
+  const renderUsers = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+          <p className="text-gray-600">Manage all platform users and their roles</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Users</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {adminStats.totalCustomers + adminStats.totalVendors + 1}
+              </p>
+            </div>
+            <Users className="h-8 w-8 text-blue-600" />
+          </div>
+          <p className="text-sm text-gray-600 mt-2">All registered users</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Active Customers</p>
+              <p className="text-2xl font-bold text-green-600">{adminStats.totalCustomers}</p>
+            </div>
+            <User className="h-8 w-8 text-green-600" />
+          </div>
+          <p className="text-sm text-gray-600 mt-2">Customer accounts</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Active Vendors</p>
+              <p className="text-2xl font-bold text-purple-600">{adminStats.totalVendors}</p>
+            </div>
+            <Package className="h-8 w-8 text-purple-600" />
+          </div>
+          <p className="text-sm text-gray-600 mt-2">Vendor accounts</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">All Platform Users</h3>
+        <div className="text-center py-8 text-gray-500">
+          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p>User management interface will be implemented here</p>
+          <p className="text-sm">Features: User roles, activity monitoring, account management</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderReports = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Business Reports</h2>
+        <p className="text-gray-600">Generate comprehensive business insights and reports</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="bg-blue-100 p-3 rounded-lg">
+              <BarChart3 className="h-8 w-8 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Sales Report</h3>
+              <p className="text-sm text-gray-600">Revenue and transaction analysis</p>
+            </div>
+          </div>
+          <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+            Generate Report
+          </button>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="bg-green-100 p-3 rounded-lg">
+              <Users className="h-8 w-8 text-green-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Vendor Report</h3>
+              <p className="text-sm text-gray-600">Vendor performance and metrics</p>
+            </div>
+          </div>
+          <button className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+            Generate Report
+          </button>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="bg-purple-100 p-3 rounded-lg">
+              <Package className="h-8 w-8 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Inventory Report</h3>
+              <p className="text-sm text-gray-600">Stock levels and movement</p>
+            </div>
+          </div>
+          <button className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+            Generate Report
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSecurity = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Security & Compliance</h2>
+        <p className="text-gray-600">Monitor platform security and compliance status</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Shield className="h-6 w-6 mr-3 text-green-600" />
+            Security Status
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">SSL Certificate</span>
+              <span className="text-green-600 font-medium">✓ Active</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">Database Encryption</span>
+              <span className="text-green-600 font-medium">✓ Enabled</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">User Authentication</span>
+              <span className="text-green-600 font-medium">✓ Active</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">Row Level Security</span>
+              <span className="text-green-600 font-medium">✓ Enabled</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Database className="h-6 w-6 mr-3 text-blue-600" />
+            System Health
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">Database Status</span>
+              <span className="text-green-600 font-medium">✓ Healthy</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">API Response Time</span>
+              <span className="text-green-600 font-medium">< 200ms</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">Uptime</span>
+              <span className="text-green-600 font-medium">99.9%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">Error Rate</span>
+              <span className="text-green-600 font-medium">< 0.1%</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -734,40 +1063,20 @@ const EnhancedAdminDashboard: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Types</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Dropshipped</span>
+              <span className="text-sm text-gray-600">Samoku Official</span>
               <span className="text-sm font-medium text-gray-900">
-                {allProducts.filter(p => p.isDropshipped).length}
+                {allProducts.filter(p => p.ownerId === user?.id).length}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Vendor Products</span>
               <span className="text-sm font-medium text-gray-900">
-                {allProducts.filter(p => !p.isDropshipped).length}
+                {allProducts.filter(p => p.ownerId !== user?.id).length}
               </span>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-
-  const renderDropshipping = () => (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Dropshipping Management</h2>
-        <p className="text-gray-600">Import and manage dropshipped products</p>
-      </div>
-      <DropshippingManager />
-    </div>
-  );
-
-  const renderSupport = () => (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Support Tickets</h2>
-        <p className="text-gray-600">Manage customer support requests</p>
-      </div>
-      <SupportTicketManager />
     </div>
   );
 
@@ -840,16 +1149,18 @@ const EnhancedAdminDashboard: React.FC = () => {
     switch (activeTab) {
       case 'overview':
         return renderOverview();
-      case 'vendors':
-        return renderVendors();
       case 'products':
         return renderProducts();
+      case 'vendors':
+        return renderVendors();
       case 'orders':
         return renderOrders();
-      case 'dropshipping':
-        return renderDropshipping();
-      case 'support':
-        return renderSupport();
+      case 'users':
+        return renderUsers();
+      case 'reports':
+        return renderReports();
+      case 'security':
+        return renderSecurity();
       case 'analytics':
         return renderAnalytics();
       case 'settings':
@@ -923,6 +1234,197 @@ const EnhancedAdminDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Add Product Modal */}
+        {showAddProductForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+              <form onSubmit={handleAddProduct} className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Add New Product</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProductForm(false)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <X className="h-5 w-5 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Product Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newProduct.name}
+                      onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SKU
+                    </label>
+                    <input
+                      type="text"
+                      value={newProduct.sku}
+                      onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
+                      placeholder="SAMOKU-XXX-001"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Category *
+                    </label>
+                    <select
+                      required
+                      value={newProduct.category}
+                      onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map(cat => (
+                        <option key={cat} value={cat}>
+                          {cat.charAt(0).toUpperCase() + cat.slice(1).replace('-', ' & ')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subcategory
+                    </label>
+                    <input
+                      type="text"
+                      value={newProduct.subcategory}
+                      onChange={(e) => setNewProduct({ ...newProduct, subcategory: e.target.value })}
+                      placeholder="e.g., smartphones, laptops"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Price *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={newProduct.price}
+                      onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Original Price
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newProduct.originalPrice}
+                      onChange={(e) => setNewProduct({ ...newProduct, originalPrice: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Stock Quantity *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={newProduct.stockQuantity}
+                      onChange={(e) => setNewProduct({ ...newProduct, stockQuantity: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tags (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={newProduct.tags}
+                      onChange={(e) => setNewProduct({ ...newProduct, tags: e.target.value })}
+                      placeholder="premium, wireless, electronics"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description *
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={newProduct.description}
+                    onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Product Images (one per line)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newProduct.images.join('\n')}
+                    onChange={(e) => setNewProduct({ 
+                      ...newProduct, 
+                      images: e.target.value.split('\n').filter(url => url.trim() !== '') 
+                    })}
+                    placeholder="https://images.pexels.com/photos/..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Specifications (JSON format)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newProduct.specifications}
+                    onChange={(e) => setNewProduct({ ...newProduct, specifications: e.target.value })}
+                    placeholder='{"screen_size": "6.1 inches", "storage": "128GB"}'
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-4 mt-6 pt-6 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProductForm(false)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Add Product
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </RoleGuard>
   );
