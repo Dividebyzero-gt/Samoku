@@ -18,7 +18,8 @@ import {
   Upload,
   BarChart3,
   User,
-  LogOut
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
