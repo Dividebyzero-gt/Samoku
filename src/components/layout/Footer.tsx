@@ -237,7 +237,7 @@ const Footer: React.FC = () => {
               >
                 <span>📱</span>
                 <div className="text-left">
-                  <div className="text-xs">Download on the</div>
+                  <div className="text-xs">Coming Soon</div>
                   <div className="text-sm font-semibold">App Store</div>
                 </div>
               </a>
@@ -247,7 +247,7 @@ const Footer: React.FC = () => {
               >
                 <span>🤖</span>
                 <div className="text-left">
-                  <div className="text-xs">Get it on</div>
+                  <div className="text-xs">Coming Soon</div>
                   <div className="text-sm font-semibold">Google Play</div>
                 </div>
               </a>
