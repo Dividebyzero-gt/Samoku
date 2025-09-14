@@ -38,7 +38,7 @@ const About: React.FC = () => {
                 className="rounded-2xl shadow-2xl"
               />
               <div className="absolute -bottom-6 -left-6 bg-blue-600 text-white p-4 rounded-xl shadow-lg">
-                <p className="text-sm font-semibold">Since 2023</p>
+                <p className="text-sm font-semibold">Since July 2025</p>
                 <p className="text-xs opacity-90">Transforming commerce</p>
               </div>
             </div>
@@ -158,27 +158,27 @@ const About: React.FC = () => {
             <div className="space-y-16">
               {[
                 {
-                  year: '2023',
+                  year: 'July 2025',
                   title: 'Company Founded',
                   description: 'Started with a vision to democratize e-commerce and empower small businesses worldwide.',
                   align: 'left'
                 },
                 {
-                  year: '2024',
-                  title: 'First Million Users',
-                  description: 'Reached our first million registered users and 10,000 active vendors across 50 countries.',
+                  year: 'Q4 2025',
+                  title: 'Platform Launch',
+                  description: 'Successfully launched our multivendor marketplace with advanced dropshipping integration.',
                   align: 'right'
                 },
                 {
-                  year: '2025',
-                  title: 'Global Expansion',
-                  description: 'Launched in 190+ countries with advanced AI-powered recommendations and instant checkout.',
+                  year: '2026',
+                  title: 'Scale & Growth',
+                  description: 'Expanding vendor network and implementing AI-powered recommendations for enhanced user experience.',
                   align: 'left'
                 },
                 {
                   year: 'Future',
                   title: 'Next Chapter',
-                  description: 'Continuing to innovate with AR shopping, sustainable commerce, and blockchain integration.',
+                  description: 'Planning global expansion with AR shopping experiences and sustainable commerce initiatives.',
                   align: 'right'
                 }
               ].map(({ year, title, description, align }) => (
