@@ -280,7 +280,7 @@ const Footer: React.FC = () => {
             {/* Copyright */}
             <div className="text-center lg:text-right">
               <p className="text-gray-400 text-sm mb-2">
-                © 2025 Samoku Marketplace Inc. All rights reserved.
+                © 2025 Samoku Inc. All rights reserved.
               </p>
               <div className="flex justify-center lg:justify-end space-x-4 text-xs text-gray-500">
                 <span>🔒 SSL Secured</span>
